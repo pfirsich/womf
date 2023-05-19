@@ -1,0 +1,10 @@
+.clangd/
+.DS_Store
+.vscode/
+build/
+build_release/
+compile_commands.json
+untracked/
+subprojects/*
+!subprojects/*.wrap
+vcpkg_installed/
