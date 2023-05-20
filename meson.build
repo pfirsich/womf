@@ -6,6 +6,7 @@ gltf_dep = dependency('gltf', fallback: ['gltf', 'gltf_dep'])
 
 womf_src = [
   'src/main.cpp',
+  'src/threadpool.cpp',
 ]
 
 executable('womf', womf_src,
