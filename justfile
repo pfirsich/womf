@@ -3,7 +3,7 @@ set dotenv-load
 pwd := `pwd`
 vcpkg_installed := pwd + '/vcpkg_installed/x64-linux'
 
-test: build
+run: build
     build/womf
 
 gdb: build
