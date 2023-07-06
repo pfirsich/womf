@@ -9,13 +9,19 @@ run: build
 gdb: build
     gdb build/womf
 
-setup build_dir='build/':
+setup build_dir="build/":
+    cmake -B "{{build_dir}}" --preset default
+
+build build_dir="build/":
+    cmake --build build
+
+setup-meson build_dir='build/':
     meson setup \
         "-Dpkg_config_path={{vcpkg_installed}}/lib/pkgconfig/:{{vcpkg_installed}}/share/pkgconfig" \
         "-Dincludedir={{vcpkg_installed}}/include/" \
         "{{build_dir}}"
 
-build build_dir='build/':
+build-meson build_dir='build/':
     meson compile -C "{{build_dir}}"
 
 vcpkg-install:

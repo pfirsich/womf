@@ -7,7 +7,7 @@
 #include <spdlog/spdlog.h>
 
 #define SOL_ALL_SAFETIES_ON 1
-#include <sol.hpp>
+#include <sol/sol.hpp>
 
 #include "glw/enums.hpp"
 #include "glw/state.hpp"
