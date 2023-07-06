@@ -4,7 +4,6 @@
 #include <span>
 
 #include <fmt/format.h>
-#include <spdlog/spdlog.h>
 
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
@@ -277,13 +276,12 @@ std::optional<std::string> resolveIncludes(std::string_view src, const std::stri
                     // absolute include
                     path = arg.substr(1, arg.size() - 2);
                 } else {
-                    spdlog::critical(
-                        "Invalid argument '{}' for #include in line {}", arg, lineNumber);
+                    fmt::print(stderr, "Invalid argument '{}' for #include in line {}\n", arg, lineNumber);
                     return std::nullopt;
                 }
                 const auto included = glwx::readFile(path);
                 if (!included) {
-                    spdlog::critical("Could not load included shader: {}", path);
+                    fmt::print(stderr, "Could not load included shader: {}\n", path);
                     return std::nullopt;
                 }
                 output.append(src.substr(start, cursor - start));
