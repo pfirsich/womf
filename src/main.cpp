@@ -824,7 +824,7 @@ int main(int argc, char** argv)
     try {
         auto config = lua.script_file("config.lua");
         assert(config.valid());
-        title = config.get<sol::table>()["title"];
+        title = config.get<sol::table>()["title"].get<std::optional<std::string>>();
     } catch (const sol::error& exc) {
         fmt::print(stderr, "Error loading config.lua: {}\n", exc.what());
     }
@@ -850,12 +850,12 @@ int main(int argc, char** argv)
     try {
         auto main = lua.script_file("main.lua");
         if (!main.valid()) {
-            fmt::print(stderr, "Error: {}\n", static_cast<sol::error>(main).what());
+            fmt::print(stderr, "Error: {}\n", main.get<sol::error>().what());
             return 1;
         }
         const auto res = main.get<sol::function>()();
         if (!res.valid()) {
-            fmt::print(stderr, "Error running main.lua: {}\n", static_cast<sol::error>(res).what());
+            fmt::print(stderr, "Error running main.lua: {}\n", res.get<sol::error>().what());
             return 1;
         }
     } catch (const DieException& exc) {
