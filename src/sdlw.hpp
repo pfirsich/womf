@@ -8,6 +8,10 @@
 
 #include <SDL2/SDL.h>
 
+// Windows, you are drunk. Go home.
+#undef near
+#undef far
+
 /* TODO:
  * - Text Input: https://wiki.libsdl.org/SDL2/Tutorials-TextInput
  * - All the joystick & gamepad shit
