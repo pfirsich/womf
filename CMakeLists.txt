@@ -28,7 +28,10 @@ message(STATUS "LuaJIT Include Dir: ${LUAJIT_INCLUDE_DIR}")
 message(STATUS "LuaJIT Library Dir: ${LUAJIT_LIBRARY_DIR}")
 
 set(SRC
+  buffer.cpp
+  graphics.cpp
   main.cpp
+  sdlw.cpp
 )
 list(TRANSFORM SRC PREPEND src/)
 
