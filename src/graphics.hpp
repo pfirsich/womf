@@ -110,21 +110,20 @@ class Geometry : public std::enable_shared_from_this<Geometry> {
 public:
     using Ptr = std::shared_ptr<Geometry>;
 
+    [[nodiscard]] static Ptr create(glw::DrawMode mode);
+
+    void addVertexBuffer(const glw::VertexFormat& fmt, GraphicsBuffer::Ptr buffer);
+
     // This takes an AttributeType, so I only have to bind a single enum to Lua
-    [[nodiscard]] static Ptr create(glw::DrawMode mode, glw::VertexFormat fmt,
-        GraphicsBuffer::Ptr attributes, glw::AttributeType idxType, GraphicsBuffer::Ptr indices);
+    void setIndexBuffer(glw::AttributeType idxType, GraphicsBuffer::Ptr buffer);
 
     void draw();
 
 private:
-    Geometry(glw::DrawMode mode, glw::VertexFormat fmt, GraphicsBuffer::Ptr attributes,
-        glw::IndexType idxType, GraphicsBuffer::Ptr indices);
+    Geometry(glw::DrawMode mode);
 
-    glw::DrawMode mode_;
-    glw::VertexFormat fmt_;
-    GraphicsBuffer::Ptr attributes_;
-    glw::IndexType idxType_;
-    GraphicsBuffer::Ptr indices_;
+    std::vector<GraphicsBuffer::Ptr> vertexBuffers_;
+    GraphicsBuffer::Ptr indexBuffer_;
     glwx::Primitive primitive_;
 };
 

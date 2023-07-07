@@ -246,11 +246,9 @@ GraphicsBuffer::GraphicsBuffer(BufferTarget target, BufferUsage usage, std::stri
         buffer_->data().size());
 }
 
-Geometry::Ptr Geometry::create(glw::DrawMode mode, glw::VertexFormat fmt,
-    GraphicsBuffer::Ptr attributes, glw::AttributeType idxType, GraphicsBuffer::Ptr indices)
+Geometry::Ptr Geometry::create(glw::DrawMode mode)
 {
-    return std::shared_ptr<Geometry>(new Geometry(mode, std::move(fmt), std::move(attributes),
-        static_cast<glw::IndexType>(idxType), std::move(indices)));
+    return std::shared_ptr<Geometry>(new Geometry(mode));
 }
 
 void Geometry::draw()
@@ -258,17 +256,21 @@ void Geometry::draw()
     primitive_.draw();
 }
 
-Geometry::Geometry(glw::DrawMode mode, glw::VertexFormat fmt, GraphicsBuffer::Ptr attributes,
-    glw::IndexType idxType, GraphicsBuffer::Ptr indices)
-    : mode_(mode)
-    , fmt_(std::move(fmt))
-    , attributes_(std::move(attributes))
-    , idxType_(idxType)
-    , indices_(std::move(indices))
-    , primitive_(mode)
+Geometry::Geometry(glw::DrawMode mode)
+    : primitive_(mode)
 {
-    primitive_.addVertexBuffer(attributes_->getGlBuffer(), fmt_);
-    primitive_.setIndexBuffer(indices_->getGlBuffer(), idxType_);
+}
+
+void Geometry::addVertexBuffer(const glw::VertexFormat& fmt, GraphicsBuffer::Ptr buffer)
+{
+    primitive_.addVertexBuffer(buffer->getGlBuffer(), fmt);
+    vertexBuffers_.push_back(std::move(buffer));
+}
+
+void Geometry::setIndexBuffer(glw::AttributeType idxType, GraphicsBuffer::Ptr buffer)
+{
+    primitive_.setIndexBuffer(buffer->getGlBuffer(), static_cast<glw::IndexType>(idxType));
+    indexBuffer_ = std::move(buffer);
 }
 
 std::tuple<float, float, float> Transform::unpack(const glm::vec3& v)

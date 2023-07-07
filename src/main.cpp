@@ -146,9 +146,11 @@ auto bindVertexFormat(sol::state& lua)
 
 auto bindGeometry(sol::state& lua)
 {
-    return lua.new_usertype<Geometry>("Geometry", sol::call_constructor,
-        sol::factories(static_cast<Geometry::Ptr (*)(glw::DrawMode, glw::VertexFormat,
-                GraphicsBuffer::Ptr, glw::AttributeType, GraphicsBuffer::Ptr)>(&Geometry::create)));
+    auto geometry = lua.new_usertype<Geometry>(
+        "Geometry", sol::call_constructor, sol::factories(&Geometry::create));
+    geometry["addVertexBuffer"] = &Geometry::addVertexBuffer;
+    geometry["setIndexBuffer"] = &Geometry::setIndexBuffer;
+    return geometry;
 }
 
 auto bindTransform(sol::state& lua)

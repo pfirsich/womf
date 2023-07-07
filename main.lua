@@ -10,7 +10,9 @@ local fmt = womf.VertexFormat {
     { "texcoord0", womf.attrType.f32, 2 },
 }
 
-local geom = womf.Geometry(womf.drawMode.triangles, fmt, attr, womf.attrType.u16, idx)
+local geom = womf.Geometry(womf.drawMode.triangles)
+geom:addVertexBuffer(fmt, attr)
+geom:setIndexBuffer(womf.attrType.u16, idx)
 
 local xRes, yRes = womf.getWindowSize()
 womf.setProjection(45, xRes/yRes, 0.1, 100.0)
