@@ -1,6 +1,7 @@
 #include "buffer.hpp"
 
 #include "die.hpp"
+#include "util.hpp"
 
 std::span<const uint8_t> Buffer::data() const
 {
@@ -23,16 +24,8 @@ std::string Buffer::name() const
 
 Buffer::Buffer(std::string filename)
     : filename_(std::move(filename))
+    , data_(readFile<std::vector<uint8_t>>(filename_))
 {
-    auto file = std::unique_ptr<FILE, decltype(&std::fclose)>(
-        std::fopen(filename_.c_str(), "rb"), &std::fclose);
-    if (!file) {
-        throw DieException(fmt::format("Could not open file '{}'", filename_));
-    }
-    std::fseek(file.get(), 0, SEEK_END);
-    data_.resize(std::ftell(file.get()));
-    std::fseek(file.get(), 0, SEEK_SET);
-    std::fread(data_.data(), 1, data_.size(), file.get());
 }
 
 BufferView::Ptr BufferView::create(Buffer::Ptr buffer, size_t offset, size_t size)

@@ -38,8 +38,8 @@ public:
 private:
     Buffer(std::string filename);
 
-    std::vector<uint8_t> data_;
     std::string filename_;
+    std::vector<uint8_t> data_;
 };
 
 class BufferView final

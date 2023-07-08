@@ -5,6 +5,7 @@
 #include "die.hpp"
 #include "graphics.hpp"
 #include "sdlw.hpp"
+#include "util.hpp"
 
 void bindSys(sol::state& lua, sol::table table, const sdlw::GlWindow& window)
 {
@@ -270,6 +271,7 @@ int main(int argc, char** argv)
     bindSys(lua, lua["womf"], *window);
     bindGfx(lua, lua["womf"]);
     bindTypes(lua, lua["womf"]);
+    lua["womf"]["readFile"] = &readFile<std::string>;
 
     try {
         auto main = lua.script_file("main.lua");
