@@ -234,16 +234,14 @@ GraphicsBuffer::GraphicsBuffer(BufferTarget target, BufferUsage usage, BufferBas
     , usage_(usage)
     , buffer_(std::move(buffer))
 {
-}
-
-GraphicsBuffer::GraphicsBuffer(BufferTarget target, BufferUsage usage, std::string filename)
-    : target_(target)
-    , usage_(usage)
-    , buffer_(Buffer::create(std::move(filename)))
-{
     gfxBuffer_.data(static_cast<glw::Buffer::Target>(target_),
         static_cast<glw::Buffer::UsageHint>(usage_), buffer_->data().data(),
         buffer_->data().size());
+}
+
+GraphicsBuffer::GraphicsBuffer(BufferTarget target, BufferUsage usage, std::string filename)
+    : GraphicsBuffer(target, usage, Buffer::create(std::move(filename)))
+{
 }
 
 Geometry::Ptr Geometry::create(glw::DrawMode mode)
