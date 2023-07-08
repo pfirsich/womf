@@ -142,8 +142,6 @@ auto bindVertexFormat(sol::state& lua)
                 const auto num = attr.get<uint32_t>(3);
                 const auto normalized = attr.get_or(4, false);
                 fmt.add(loc, num, type, normalized);
-                fmt::print("loc: {}, type: {}, num: {}, normalized: {}\n", loc,
-                    static_cast<int>(type), num, normalized);
             }
             return fmt;
         }));
