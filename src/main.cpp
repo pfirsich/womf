@@ -1,6 +1,9 @@
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
 
+#include <cmrc/cmrc.hpp>
+CMRC_DECLARE(luaSource);
+
 #include "buffer.hpp"
 #include "die.hpp"
 #include "graphics.hpp"
@@ -236,6 +239,20 @@ int solExceptionHandler(
     return sol::stack::push(L, description);
 }
 
+void preload(sol::state& lua, const std::string& moduleName, const cmrc::embedded_filesystem& resFs,
+    const std::string& filename)
+{
+    lua["package"]["preload"][moduleName] = [&, moduleName, filename]() -> sol::object {
+        try {
+            auto file = resFs.open(filename);
+            return lua.script(std::string_view(file.begin(), file.end()));
+        } catch (const std::exception& exc) {
+            die("Could not preload '{}': {}", moduleName, exc.what());
+            return sol::nil;
+        }
+    };
+}
+
 int main(int argc, char** argv)
 {
     std::vector<std::string_view> args(argv + 1, argv + argc);
@@ -271,6 +288,10 @@ int main(int argc, char** argv)
     gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
     glw::State::instance().setViewport(window->getSize().x, window->getSize().y);
     glEnable(GL_DEPTH_TEST);
+
+    const auto resFs = cmrc::luaSource::get_filesystem();
+    preload(lua, "inspect", resFs, "inspect.lua");
+    preload(lua, "json", resFs, "json.lua");
 
     lua["womf"] = lua.create_table();
     bindSys(lua, lua["womf"], *window);
