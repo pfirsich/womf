@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
 add_compile_definitions(NOMINMAX _USE_MATH_DEFINES) # Windows is trash
+add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 
 add_subdirectory(subprojects/glwrap)
 
