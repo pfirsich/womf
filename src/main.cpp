@@ -292,6 +292,7 @@ int main(int argc, char** argv)
     const auto resFs = cmrc::luaSource::get_filesystem();
     preload(lua, "inspect", resFs, "inspect.lua");
     preload(lua, "json", resFs, "json.lua");
+    preload(lua, "gltf", resFs, "gltf.lua");
 
     lua["womf"] = lua.create_table();
     bindSys(lua, lua["womf"], *window);

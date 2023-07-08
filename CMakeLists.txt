@@ -43,6 +43,7 @@ cmrc_add_resource_library(
   WHENCE src/lua/
   src/lua/json.lua
   src/lua/inspect.lua
+  src/lua/gltf.lua
 )
 
 add_executable(womf ${SRC})
