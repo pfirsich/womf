@@ -255,6 +255,7 @@ int main(int argc, char** argv)
         title = config.get<sol::table>()["title"].get<std::optional<std::string>>();
     } catch (const sol::error& exc) {
         fmt::print(stderr, "Error loading config.lua: {}\n", exc.what());
+        return 1;
     }
 
     // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
