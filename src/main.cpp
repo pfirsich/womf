@@ -69,6 +69,10 @@ void bindGfx(sol::state&, sol::table table)
             case glw::UniformInfo::Type::Sampler2D:
                 dieAssert(value.is<Texture>(), "Value for '{}' must be 'Texture'", nameStr);
                 uniformSet[nameStr] = &value.as<Texture>().getGlTexture();
+                break;
+            default:
+                die("Uniform of type '{}' not implemented yet",
+                    static_cast<GLenum>(infoIt->second.type));
             }
         }
         draw(shader.get(), geometry.get(), trafo, uniformSet);
