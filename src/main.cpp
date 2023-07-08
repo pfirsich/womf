@@ -245,7 +245,8 @@ int main(int argc, char** argv)
 
     sol::state lua;
     lua.set_exception_handler(solExceptionHandler);
-    lua.open_libraries(sol::lib::base, sol::lib::ffi);
+    lua.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::math,
+        sol::lib::table, sol::lib::ffi);
 
     std::optional<std::string> title;
     try {
