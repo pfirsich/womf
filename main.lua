@@ -1,3 +1,5 @@
+local gltf = require "gltf"
+
 local tex = womf.Texture("assets/test.png")
 
 local shader = womf.Shader("assets/default.vert", "assets/default.frag")
@@ -14,19 +16,23 @@ local geom = womf.Geometry(womf.drawMode.triangles)
 geom:addVertexBuffer(fmt, attr)
 geom:setIndexBuffer(womf.attrType.u16, idx)
 
+local scene = gltf.load("assets/Avocado.gltf")
+
 local xRes, yRes = womf.getWindowSize()
 womf.setProjection(45, xRes/yRes, 0.1, 100.0)
 
 local camTrafo = womf.Transform()
-camTrafo:lookAt(0, 0, 1)
+camTrafo:setPosition(0, 0, -0.15)
+camTrafo:lookAt(0, 0, 0)
 womf.setView(camTrafo)
 
 local trafo = womf.Transform()
-trafo:setPosition(0, 0, 2.0)
+trafo:rotate(2.0 * math.acos(math.pi * 0.5), 0, 1, 0)
 
 local function draw()
     womf.clear(0, 0, 0, 0, 1)
-    womf.draw(shader, geom, trafo, {texture = tex})
+    --womf.draw(shader, geom, trafo, {texture = tex})
+    scene:draw()
     womf.present()
 end
 
