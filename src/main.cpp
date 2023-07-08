@@ -270,6 +270,7 @@ int main(int argc, char** argv)
 
     gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
     glw::State::instance().setViewport(window->getSize().x, window->getSize().y);
+    glEnable(GL_DEPTH_TEST);
 
     lua["womf"] = lua.create_table();
     bindSys(lua, lua["womf"], *window);
