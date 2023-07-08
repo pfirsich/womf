@@ -4,6 +4,10 @@
 
 #include "die.hpp"
 
+// Windows is so fucking stupid
+#undef near
+#undef far
+
 namespace {
 glm::mat4 projectionMatrix;
 glm::mat4 invProjectionMatrix;
