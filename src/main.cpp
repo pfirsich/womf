@@ -57,7 +57,9 @@ void bindGfx(sol::state&, sol::table table)
         for (auto&& [name, value] : uniforms) {
             const auto nameStr = name.as<std::string>();
             const auto infoIt = uniformInfo.find(nameStr);
-            dieAssert(infoIt != uniformInfo.end(), "Unknown uniform '{}'", nameStr);
+            if (infoIt == uniformInfo.end()) {
+                continue;
+            }
             switch (infoIt->second.type) {
             case glw::UniformInfo::Type::Float:
                 dieAssert(value.get_type() == sol::type::number, "Value for '{}' must be 'number'",
