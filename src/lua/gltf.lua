@@ -2,6 +2,7 @@ local json = require "json"
 
 local gltf = {}
 
+local pixelTexture = womf.pixelTexture(1, 1, 1, 1)
 
 local function walkNode(node, func)
     func(node)
@@ -25,7 +26,8 @@ local function drawScene(scene, shader, sceneTransform)
             womf.setModelMatrix(node.fullTransform)
             for _, prim in ipairs(node.mesh.primitives) do
                 womf.draw(shader, prim.geometry, {
-                    texture = prim.material.albedo,
+                    texture = prim.material.albedo or pixelTexture,
+                    color = prim.material.color,
                 })
             end
         end
