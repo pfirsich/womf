@@ -18,12 +18,13 @@ local function walkScene(scene, func)
 end
 
 local function drawScene(scene, shader, sceneTransform)
-    sceneTransform = sceneTransform and sceneTransform:getMatrix() or womf.Mat4()
+    sceneTransform = sceneTransform and mat4(sceneTransform:getMatrix()) or mat4()
     walkScene(scene, function(node)
         if node.mesh then
             local parentTrafo = node.parent and node.parent.fullTransform or sceneTransform
-            node.fullTransform = parentTrafo:mul(node.transform:getMatrix())
-            womf.setModelMatrix(node.fullTransform)
+            node.fullTransform = parentTrafo * mat4(node.transform:getMatrix())
+            womf.setModelMatrix(node.fullTransform:unpack())
+
             for _, prim in ipairs(node.mesh.primitives) do
                 womf.draw(shader, prim.geometry, {
                     texture = prim.material.albedo or pixelTexture,

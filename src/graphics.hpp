@@ -131,6 +131,10 @@ private:
     glwx::Primitive primitive_;
 };
 
+using Mat4 = std::tuple<float, float, float, float, float, float, float, float, float, float, float,
+    float, float, float, float, float>;
+static_assert(std::tuple_size_v<Mat4> == 16);
+
 struct Transform : public glwx::Transform {
     Transform() = default;
 
@@ -160,7 +164,7 @@ struct Transform : public glwx::Transform {
     void lookAt(float x, float y, float z);
     void lookAt(float x, float y, float z, float upX, float upY, float upZ);
 
-    glm::mat4 getMatrix() const;
+    Mat4 getMatrix() const;
 };
 
 using UniformValue = std::variant<int, float, glm::vec2, glm::vec3, glm::vec4, glm::mat2, glm::mat3,
@@ -183,10 +187,18 @@ void clearColor(float r, float g, float b, float a);
 void clearColorDepth(float r, float g, float b, float a, float depth);
 
 void setModelMatrix(const glm::mat4& mat);
+void setModelMatrix(float x0, float y0, float z0, float w0, float x1, float y1, float z1, float w1,
+    float x2, float y2, float z2, float w2, float x3, float y3, float z3, float w3);
 void setModelMatrix(const Transform& trafo);
-void setViewMatrix(const glm::mat4& trafo);
+
+void setViewMatrix(const glm::mat4& mat);
+void setViewMatrix(float x0, float y0, float z0, float w0, float x1, float y1, float z1, float w1,
+    float x2, float y2, float z2, float w2, float x3, float y3, float z3, float w3);
 void setViewMatrix(const Transform& trafo);
+
 void setProjectionMatrix(const glm::mat4& mat);
+void setProjectionMatrix(float x0, float y0, float z0, float w0, float x1, float y1, float z1,
+    float w1, float x2, float y2, float z2, float w2, float x3, float y3, float z3, float w3);
 void setProjectionMatrix(float fovy, float aspect, float near, float far);
 
 void draw(Shader* shader, Geometry* geometry, const UniformSet& uniforms);

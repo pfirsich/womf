@@ -48,11 +48,16 @@ void bindGfx(sol::state&, sol::table table)
     table["clear"] = sol::overload(clearColor, clearColorDepth);
     table["flush"] = &flush;
     table["setProjectionMatrix"]
-        = sol::overload(static_cast<void (*)(float, float, float, float)>(&setProjectionMatrix));
-    table["setViewMatrix"] = sol::overload(static_cast<void (*)(const Transform&)>(&setViewMatrix));
+        = sol::overload(static_cast<void (*)(float, float, float, float)>(&setProjectionMatrix),
+            static_cast<void (*)(float, float, float, float, float, float, float, float, float,
+                float, float, float, float, float, float, float)>(&setProjectionMatrix));
+    table["setViewMatrix"] = sol::overload(static_cast<void (*)(const Transform&)>(&setViewMatrix),
+        static_cast<void (*)(float, float, float, float, float, float, float, float, float, float,
+            float, float, float, float, float, float)>(&setViewMatrix));
     table["setModelMatrix"]
         = sol::overload(static_cast<void (*)(const Transform&)>(&setModelMatrix),
-            static_cast<void (*)(const glm::mat4&)>(&setModelMatrix));
+            static_cast<void (*)(float, float, float, float, float, float, float, float, float,
+                float, float, float, float, float, float, float)>(&setModelMatrix));
 
     // TODO: optional RenderState, optional sortKey
     table["draw"] = [](Shader::Ptr shader, Geometry::Ptr geometry, sol::table uniforms) {
@@ -244,10 +249,6 @@ void bindTypes(sol::state& lua, sol::table table)
     table["Geometry"] = bindGeometry(lua);
 
     table["Transform"] = bindTransform(lua);
-
-    table["Mat4"] = lua.new_usertype<glm::mat4>(
-        "Mat4", sol::call_constructor, []() { return glm::mat4(1.0f); });
-    table["Mat4"]["mul"] = [](const glm::mat4& lhs, const glm::mat4& rhs) { return lhs * rhs; };
 }
 
 int solExceptionHandler(

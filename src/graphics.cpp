@@ -366,9 +366,11 @@ void Transform::lookAt(float x, float y, float z, float upX, float upY, float up
     glwx::Transform::lookAt(glm::vec3(x, y, z), glm::vec3(upX, upY, upZ));
 }
 
-glm::mat4 Transform::getMatrix() const
+Mat4 Transform::getMatrix() const
 {
-    return glwx::Transform::getMatrix();
+    auto m = glwx::Transform::getMatrix();
+    return Mat4 { m[0][0], m[0][1], m[0][2], m[0][3], m[1][0], m[1][1], m[1][2], m[1][3], m[2][0],
+        m[2][1], m[2][2], m[2][3], m[3][0], m[3][1], m[3][2], m[3][3] };
 }
 
 size_t getAttributeLocation(const std::string& name)
@@ -445,9 +447,15 @@ void setModelMatrix(const glm::mat4& mat)
     updateMVP();
 }
 
+void setModelMatrix(float x0, float y0, float z0, float w0, float x1, float y1, float z1, float w1,
+    float x2, float y2, float z2, float w2, float x3, float y3, float z3, float w3)
+{
+    setModelMatrix(glm::mat4(x0, y0, z0, w0, x1, y1, z1, w1, x2, y2, z2, w2, x3, y3, z3, w3));
+}
+
 void setModelMatrix(const Transform& trafo)
 {
-    setModelMatrix(trafo.getMatrix());
+    setModelMatrix(trafo.glwx::Transform::getMatrix());
 }
 
 void setViewMatrix(const glm::mat4& mat)
@@ -459,9 +467,15 @@ void setViewMatrix(const glm::mat4& mat)
     updateMVP();
 }
 
+void setViewMatrix(float x0, float y0, float z0, float w0, float x1, float y1, float z1, float w1,
+    float x2, float y2, float z2, float w2, float x3, float y3, float z3, float w3)
+{
+    setViewMatrix(glm::mat4(x0, y0, z0, w0, x1, y1, z1, w1, x2, y2, z2, w2, x3, y3, z3, w3));
+}
+
 void setViewMatrix(const Transform& trafo)
 {
-    setViewMatrix(glm::inverse(trafo.getMatrix()));
+    setViewMatrix(glm::inverse(trafo.glwx::Transform::getMatrix()));
 }
 
 void setProjectionMatrix(const glm::mat4& mat)
@@ -470,6 +484,12 @@ void setProjectionMatrix(const glm::mat4& mat)
     invProjectionMatrix = glm::inverse(projectionMatrix);
     updateVP();
     updateMVP();
+}
+
+void setProjectionMatrix(float x0, float y0, float z0, float w0, float x1, float y1, float z1,
+    float w1, float x2, float y2, float z2, float w2, float x3, float y3, float z3, float w3)
+{
+    setProjectionMatrix(glm::mat4(x0, y0, z0, w0, x1, y1, z1, w1, x2, y2, z2, w2, x3, y3, z3, w3));
 }
 
 void setProjectionMatrix(float fovy, float aspect, float near, float far)
