@@ -263,20 +263,6 @@ int solExceptionHandler(
     return sol::stack::push(L, description);
 }
 
-void preload(sol::state& lua, const std::string& moduleName, const cmrc::embedded_filesystem& resFs,
-    const std::string& filename)
-{
-    lua["package"]["preload"][moduleName] = [&, moduleName, filename]() -> sol::object {
-        try {
-            auto file = resFs.open(filename);
-            return lua.script(std::string_view(file.begin(), file.end()));
-        } catch (const std::exception& exc) {
-            die("Could not preload '{}': {}", moduleName, exc.what());
-            return sol::nil;
-        }
-    };
-}
-
 int main(int argc, char** argv)
 {
     std::vector<std::string_view> args(argv + 1, argv + argc);
@@ -321,8 +307,19 @@ int main(int argc, char** argv)
     glEnable(GL_DEPTH_TEST);
 
     const auto resFs = cmrc::luaSource::get_filesystem();
-    preload(lua, "json", resFs, "json.lua");
-    preload(lua, "gltf", resFs, "gltf.lua");
+    lua.add_package_loader([&resFs](
+                               sol::this_state L, const std::string& moduleName) -> sol::object {
+        std::string path = moduleName;
+        std::replace(path.begin(), path.end(), '.', '/');
+        if (resFs.is_file(path + ".lua")) {
+            auto file = resFs.open(path + ".lua");
+            return sol::state_view(L).load(std::string_view(file.begin(), file.end()), moduleName);
+        } else if (resFs.is_directory(path) && resFs.is_file(path + "/" + "init.lua")) {
+            auto file = resFs.open(path + "/" + "init.lua");
+            return sol::state_view(L).load(std::string_view(file.begin(), file.end()), moduleName);
+        }
+        return sol::nil;
+    });
 
     // Just require this into the global table. I need it *all the time*.
     auto inspectLua = resFs.open("inspect.lua");
