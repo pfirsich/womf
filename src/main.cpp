@@ -47,12 +47,15 @@ void bindGfx(sol::state&, sol::table table)
 {
     table["clear"] = sol::overload(clearColor, clearColorDepth);
     table["flush"] = &flush;
-    table["setProjection"] = &setProjection;
-    table["setView"] = &setView;
+    table["setProjectionMatrix"]
+        = sol::overload(static_cast<void (*)(float, float, float, float)>(&setProjectionMatrix));
+    table["setViewMatrix"] = sol::overload(static_cast<void (*)(const Transform&)>(&setViewMatrix));
+    table["setModelMatrix"]
+        = sol::overload(static_cast<void (*)(const Transform&)>(&setModelMatrix),
+            static_cast<void (*)(const glm::mat4&)>(&setModelMatrix));
 
     // TODO: optional RenderState, optional sortKey
-    table["draw"] = [](Shader::Ptr shader, Geometry::Ptr geometry, const Transform& trafo,
-                        sol::table uniforms) {
+    table["draw"] = [](Shader::Ptr shader, Geometry::Ptr geometry, sol::table uniforms) {
         const auto& uniformInfo = shader->getProgram().getUniformInfo();
         UniformSet uniformSet;
         for (auto&& [name, value] : uniforms) {
@@ -89,7 +92,7 @@ void bindGfx(sol::state&, sol::table table)
                     static_cast<GLenum>(infoIt->second.type));
             }
         }
-        draw(shader.get(), geometry.get(), trafo, uniformSet);
+        draw(shader.get(), geometry.get(), uniformSet);
     };
 }
 
@@ -192,6 +195,7 @@ auto bindTransform(sol::state& lua)
         = sol::overload(static_cast<void (Transform::*)(float, float, float)>(&Transform::lookAt),
             static_cast<void (Transform::*)(float, float, float, float, float, float)>(
                 &Transform::lookAt));
+    trafo["getMatrix"] = &Transform::getMatrix;
     return trafo;
 }
 
@@ -238,7 +242,12 @@ void bindTypes(sol::state& lua, sol::table table)
     lua["DrawMode"] = sol::nil;
 
     table["Geometry"] = bindGeometry(lua);
+
     table["Transform"] = bindTransform(lua);
+
+    table["Mat4"] = lua.new_usertype<glm::mat4>(
+        "Mat4", sol::call_constructor, []() { return glm::mat4(1.0f); });
+    table["Mat4"]["mul"] = [](const glm::mat4& lhs, const glm::mat4& rhs) { return lhs * rhs; };
 }
 
 int solExceptionHandler(

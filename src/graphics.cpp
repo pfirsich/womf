@@ -8,15 +8,6 @@
 #undef near
 #undef far
 
-namespace {
-glm::mat4 projectionMatrix;
-glm::mat4 invProjectionMatrix;
-glm::mat4 viewMatrix;
-glm::mat4 invViewMatrix;
-glm::mat4 viewProjectionMatrix;
-glm::mat4 invViewProjectionMatrix;
-}
-
 Texture::Ptr Texture::create(Buffer::Ptr buffer)
 {
     return std::shared_ptr<Texture>(
@@ -375,6 +366,11 @@ void Transform::lookAt(float x, float y, float z, float upX, float upY, float up
     glwx::Transform::lookAt(glm::vec3(x, y, z), glm::vec3(upX, upY, upZ));
 }
 
+glm::mat4 Transform::getMatrix() const
+{
+    return glwx::Transform::getMatrix();
+}
+
 size_t getAttributeLocation(const std::string& name)
 {
     static const std::unordered_map<std::string, size_t> locs {
@@ -405,21 +401,80 @@ void clearColorDepth(float r, float g, float b, float a, float depth)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void setProjection(float fovy, float aspect, float near, float far)
+namespace {
+glm::mat4 modelMatrix;
+glm::mat4 invModelMatrix;
+glm::mat3 normalMatrix; // inv normal is just transpose
+glm::mat4 viewMatrix;
+glm::mat4 invViewMatrix;
+glm::mat4 projectionMatrix;
+glm::mat4 invProjectionMatrix;
+
+glm::mat4 modelViewMatrix;
+glm::mat4 invModelViewMatrix;
+glm::mat4 viewProjectionMatrix;
+glm::mat4 invViewProjectionMatrix;
+glm::mat4 modelViewProjectionMatrix;
+glm::mat4 invModelViewProjectionMatrix;
+
+void updateMV()
 {
-    projectionMatrix = glm::perspective(fovy, aspect, near, far);
-    invProjectionMatrix = glm::inverse(projectionMatrix);
+    modelViewMatrix = viewMatrix * modelMatrix;
+    invModelViewMatrix = invModelMatrix * invViewMatrix;
+}
+
+void updateVP()
+{
     viewProjectionMatrix = projectionMatrix * viewMatrix;
     invViewProjectionMatrix = invViewMatrix * invProjectionMatrix;
 }
 
-void setView(const Transform& trafo)
+void updateMVP()
 {
-    const auto mat = trafo.getMatrix();
-    viewMatrix = glm::inverse(mat);
-    invViewMatrix = mat;
-    viewProjectionMatrix = projectionMatrix * viewMatrix;
-    invViewProjectionMatrix = invViewMatrix * invProjectionMatrix;
+    modelViewProjectionMatrix = viewProjectionMatrix * modelMatrix;
+    invModelViewProjectionMatrix = invModelMatrix * invViewProjectionMatrix;
+}
+}
+
+void setModelMatrix(const glm::mat4& mat)
+{
+    modelMatrix = mat;
+    invModelMatrix = glm::inverse(mat);
+    normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
+    updateMV();
+    updateMVP();
+}
+
+void setModelMatrix(const Transform& trafo)
+{
+    setModelMatrix(trafo.getMatrix());
+}
+
+void setViewMatrix(const glm::mat4& mat)
+{
+    viewMatrix = mat;
+    invViewMatrix = glm::inverse(mat); // useless double inversion
+    updateMV();
+    updateVP();
+    updateMVP();
+}
+
+void setViewMatrix(const Transform& trafo)
+{
+    setViewMatrix(glm::inverse(trafo.getMatrix()));
+}
+
+void setProjectionMatrix(const glm::mat4& mat)
+{
+    projectionMatrix = mat;
+    invProjectionMatrix = glm::inverse(projectionMatrix);
+    updateVP();
+    updateMVP();
+}
+
+void setProjectionMatrix(float fovy, float aspect, float near, float far)
+{
+    setProjectionMatrix(glm::perspective(fovy, aspect, near, far));
 }
 
 int bind(const glw::Texture* texture)
@@ -478,22 +533,28 @@ void UniformSet::set(const glw::ShaderProgram& shader) const
     }
 }
 
-void draw(Shader* shader, Geometry* geometry, const Transform& trafo, const UniformSet& uniforms)
+void draw(Shader* shader, Geometry* geometry, const UniformSet& uniforms)
 {
-    const auto modelMatrix = trafo.getMatrix();
-    const auto normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
-    const auto modelViewMatrix = viewMatrix * modelMatrix;
-    const auto modelViewProjectionMatrix = viewProjectionMatrix * modelMatrix;
     const auto& prog = shader->getProgram();
     prog.bind();
+
     prog.setUniform("modelMatrix", modelMatrix);
+    prog.setUniform("invModelMatrix", invModelMatrix);
     prog.setUniform("normalMatrix", normalMatrix);
     prog.setUniform("viewMatrix", viewMatrix);
+    prog.setUniform("invViewMatrix", invViewMatrix);
     prog.setUniform("projectionMatrix", projectionMatrix);
+    prog.setUniform("invProjectionMatrix", invProjectionMatrix);
+
     prog.setUniform("modelViewMatrix", modelViewMatrix);
+    prog.setUniform("invModelViewMatrix", invModelViewMatrix);
     prog.setUniform("viewProjectionMatrix", viewProjectionMatrix);
+    prog.setUniform("invViewProjectionMatrix", invViewProjectionMatrix);
     prog.setUniform("modelViewProjectionMatrix", modelViewProjectionMatrix);
+    prog.setUniform("invModelViewProjectionMatrix", invModelViewProjectionMatrix);
+
     uniforms.set(prog);
+
     geometry->draw();
 }
 

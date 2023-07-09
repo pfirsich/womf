@@ -159,6 +159,8 @@ struct Transform : public glwx::Transform {
 
     void lookAt(float x, float y, float z);
     void lookAt(float x, float y, float z, float upX, float upY, float upZ);
+
+    glm::mat4 getMatrix() const;
 };
 
 using UniformValue = std::variant<int, float, glm::vec2, glm::vec3, glm::vec4, glm::mat2, glm::mat3,
@@ -180,8 +182,12 @@ size_t getAttributeLocation(const std::string& name);
 void clearColor(float r, float g, float b, float a);
 void clearColorDepth(float r, float g, float b, float a, float depth);
 
-void setProjection(float fovy, float aspect, float near, float far);
-void setView(const Transform& trafo);
+void setModelMatrix(const glm::mat4& mat);
+void setModelMatrix(const Transform& trafo);
+void setViewMatrix(const glm::mat4& trafo);
+void setViewMatrix(const Transform& trafo);
+void setProjectionMatrix(const glm::mat4& mat);
+void setProjectionMatrix(float fovy, float aspect, float near, float far);
 
-void draw(Shader* shader, Geometry* geometry, const Transform& trafo, const UniformSet& uniforms);
+void draw(Shader* shader, Geometry* geometry, const UniformSet& uniforms);
 void flush();

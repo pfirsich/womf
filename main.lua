@@ -19,20 +19,21 @@ geom:setIndexBuffer(womf.attrType.u16, idx)
 local scene = gltf.load("assets/Avocado.gltf")
 
 local xRes, yRes = womf.getWindowSize()
-womf.setProjection(45, xRes/yRes, 0.1, 100.0)
+womf.setProjectionMatrix(45, xRes/yRes, 0.1, 100.0)
 
 local camTrafo = womf.Transform()
 camTrafo:setPosition(0, 0, -0.15)
 camTrafo:lookAt(0, 0, 0)
-womf.setView(camTrafo)
+womf.setViewMatrix(camTrafo)
 
 local trafo = womf.Transform()
 trafo:rotate(2.0 * math.acos(math.pi * 0.5), 0, 1, 0)
 
 local function draw()
     womf.clear(0, 0, 0, 0, 1)
-    --womf.draw(shader, geom, trafo, {texture = tex})
-    scene:draw()
+    -- womf.setModelMatrix(trafo)
+    -- womf.draw(shader, geom, {texture = tex})
+    scene:draw(shader)
     womf.present()
 end
 

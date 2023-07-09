@@ -2,26 +2,34 @@ local json = require "json"
 
 local gltf = {}
 
-local shader = womf.Shader("assets/default.vert", "assets/default.frag")
-local ident = womf.Transform()
 
-local function drawNode(node)
-    if node.mesh then
-        for _, prim in ipairs(node.mesh.primitives) do
-            womf.draw(shader, prim.geometry, ident, {
-                texture = prim.material.albedo,
-            })
-        end
-    end
+local function walkNode(node, func)
+    func(node)
     for _, child in ipairs(node.children) do
-        drawNode(node) -- TODO: Transform!
+        walkNode(child, func)
     end
 end
 
-local function drawScene(scene)
+local function walkScene(scene, func)
     for _, node in ipairs(scene) do
-        drawNode(node)
+        walkNode(node, func)
     end
+end
+
+local function drawScene(scene, shader, sceneTransform)
+    sceneTransform = sceneTransform and sceneTransform:getMatrix() or womf.Mat4()
+    walkScene(scene, function(node)
+        if node.mesh then
+            local parentTrafo = node.parent and node.parent.fullTransform or sceneTransform
+            node.fullTransform = parentTrafo:mul(node.transform:getMatrix())
+            womf.setModelMatrix(node.fullTransform)
+            for _, prim in ipairs(node.mesh.primitives) do
+                womf.draw(shader, prim.geometry, {
+                    texture = prim.material.albedo,
+                })
+            end
+        end
+    end)
 end
 
 function gltf.load(filename)
@@ -197,10 +205,11 @@ function gltf.load(filename)
         end
     end
 
-    for _, nodeIdx in ipairs(data.scenes[1].nodes) do
-        table.insert(ret, ret.nodes[nodeIdx + 1])
+    for i, nodeIdx in ipairs(data.scenes[1].nodes) do
+        ret[i] = ret.nodes[nodeIdx + 1]
     end
 
+    ret.walk = walkScene
     ret.draw = drawScene
 
     return ret
