@@ -29,6 +29,11 @@ Texture::Ptr Texture::create(BufferView::Ptr buffer)
         new Texture(std::static_pointer_cast<BufferBase>(std::move(buffer))));
 }
 
+Texture::Ptr Texture::createPixel(const glm::vec4& color, size_t width, size_t height)
+{
+    return std::shared_ptr<Texture>(new Texture(glwx::makeTexture2D(color, width, height)));
+}
+
 const glw::Texture& Texture::getGlTexture() const
 {
     return texture_;
@@ -46,6 +51,11 @@ Texture::Texture(BufferBase::Ptr buffer)
 
 Texture::Texture(std::string path)
     : Texture(Buffer::create(std::move(path)))
+{
+}
+
+Texture::Texture(glw::Texture texture)
+    : texture_(std::move(texture))
 {
 }
 

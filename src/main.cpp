@@ -202,8 +202,12 @@ void bindTypes(sol::state& lua, sol::table table)
     lua.new_usertype<BufferBase>("BufferBase");
     table["Buffer"] = bindBuffer(lua);
     table["BufferView"] = bindBufferView(lua);
-    table["Texture"] = bindTexture(lua);
     table["Shader"] = bindShader(lua);
+
+    table["Texture"] = bindTexture(lua);
+    table["pixelTexture"] = [](float r, float g, float b, float a) {
+        return Texture::createPixel(glm::vec4(r, g, b, a));
+    };
 
     lua.new_enum(
         "BufferTarget", "attributes", BufferTarget::Attributes, "indices", BufferTarget::Indices);

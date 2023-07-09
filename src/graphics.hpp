@@ -31,11 +31,15 @@ public:
         return std::shared_ptr<Texture>(new Texture(std::forward<Args>(args)...));
     }
 
+    [[nodiscard]] static Ptr createPixel(
+        const glm::vec4& color, size_t width = 1, size_t height = 1);
+
     const glw::Texture& getGlTexture() const;
 
 private:
     Texture(BufferBase::Ptr buffer);
     Texture(std::string path);
+    Texture(glw::Texture texture);
 
     BufferBase::Ptr buffer_;
     glw::Texture texture_;
