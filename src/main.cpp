@@ -268,10 +268,15 @@ int main(int argc, char** argv)
         sol::lib::table);
 
     std::optional<std::string> title;
+    std::optional<uint32_t> width;
+    std::optional<uint32_t> height;
     try {
         auto config = lua.script_file("config.lua");
         assert(config.valid());
-        title = config.get<sol::table>()["title"].get<std::optional<std::string>>();
+        auto table = config.get<sol::table>();
+        title = table["title"].get<std::optional<std::string>>();
+        width = table["width"].get<std::optional<uint32_t>>();
+        height = table["height"].get<std::optional<uint32_t>>();
     } catch (const sol::error& exc) {
         fmt::print(stderr, "Error loading config.lua: {}\n", exc.what());
         return 1;
@@ -279,8 +284,8 @@ int main(int argc, char** argv)
 
     // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
 
-    const auto window
-        = sdlw::GlWindow::create(title.value_or("womf"), 1024, 768, { .resizable = true });
+    const auto window = sdlw::GlWindow::create(
+        title.value_or("womf"), width.value_or(1024), height.value_or(768), { .resizable = true });
     if (!window) {
         fmt::print(stderr, "Error creating window: {}\n", sdlw::getError());
         return 1;
