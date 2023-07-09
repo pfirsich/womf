@@ -44,6 +44,23 @@ cmrc_add_resource_library(
   src/lua/json.lua
   src/lua/inspect.lua
   src/lua/gltf.lua
+  src/lua/cpml/init.lua
+  src/lua/cpml/modules/bound2.lua
+  src/lua/cpml/modules/bound3.lua
+  src/lua/cpml/modules/bvh.lua
+  src/lua/cpml/modules/color.lua
+  src/lua/cpml/modules/constants.lua
+  src/lua/cpml/modules/intersect.lua
+  src/lua/cpml/modules/mat4.lua
+  src/lua/cpml/modules/mesh.lua
+  src/lua/cpml/modules/octree.lua
+  src/lua/cpml/modules/_private_precond.lua
+  src/lua/cpml/modules/_private_utils.lua
+  src/lua/cpml/modules/quat.lua
+  src/lua/cpml/modules/simplex.lua
+  src/lua/cpml/modules/utils.lua
+  src/lua/cpml/modules/vec2.lua
+  src/lua/cpml/modules/vec3.lua
 )
 
 add_executable(womf ${SRC})

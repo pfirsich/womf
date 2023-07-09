@@ -324,6 +324,11 @@ int main(int argc, char** argv)
     // Just require this into the global table. I need it *all the time*.
     auto inspectLua = resFs.open("inspect.lua");
     lua["inspect"] = lua.script(std::string_view(inspectLua.begin(), inspectLua.end()));
+    lua["cpml"] = lua["require"]("cpml");
+    lua["vec2"] = lua["cpml"]["vec2"];
+    lua["vec3"] = lua["cpml"]["vec3"];
+    lua["mat4"] = lua["cpml"]["mat4"];
+    lua["quat"] = lua["cpml"]["quat"];
 
     lua["womf"] = lua.create_table();
     bindSys(lua, lua["womf"], *window);
