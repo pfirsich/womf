@@ -297,9 +297,12 @@ int main(int argc, char** argv)
     glEnable(GL_DEPTH_TEST);
 
     const auto resFs = cmrc::luaSource::get_filesystem();
-    preload(lua, "inspect", resFs, "inspect.lua");
     preload(lua, "json", resFs, "json.lua");
     preload(lua, "gltf", resFs, "gltf.lua");
+
+    // Just require this into the global table. I need it *all the time*.
+    auto inspectLua = resFs.open("inspect.lua");
+    lua["inspect"] = lua.script(std::string_view(inspectLua.begin(), inspectLua.end()));
 
     lua["womf"] = lua.create_table();
     bindSys(lua, lua["womf"], *window);
