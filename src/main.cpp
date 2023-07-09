@@ -21,6 +21,7 @@ void bindSys(sol::state& lua, sol::table table, const sdlw::GlWindow& window)
         const auto [w, h] = window.getSize();
         return std::tuple { w, h };
     };
+    table["isDown"] = [](int key) { return sdlw::isDown(static_cast<sdlw::Keycode>(key)); };
     table["pollEvent"] = [&lua]() {
         return [&lua]() -> sol::object {
             const auto event = sdlw::pollEvent();
