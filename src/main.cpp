@@ -71,6 +71,14 @@ void bindGfx(sol::state&, sol::table table)
                     nameStr);
                 uniformSet[nameStr] = value.as<int>();
                 break;
+            case glw::UniformInfo::Type::Vec4: {
+                dieAssert(value.get_type() == sol::type::table, "Value for '{}' must be a 'table'",
+                    nameStr);
+                auto tbl = value.as<sol::table>();
+                dieAssert(tbl.size() == 4, "Value for '{}' must have 4 elements", nameStr);
+                uniformSet[nameStr] = glm::vec4(tbl[1], tbl[2], tbl[3], tbl[4]);
+                break;
+            }
             case glw::UniformInfo::Type::Sampler2D:
                 dieAssert(value.is<Texture>(), "Value for '{}' must be 'Texture'", nameStr);
                 uniformSet[nameStr] = &value.as<Texture>().getGlTexture();
