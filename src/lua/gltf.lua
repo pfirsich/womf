@@ -44,7 +44,7 @@ function gltf.load(filename)
     end
 
     ret.textures = {}
-    for texIdx, texture in ipairs(data.textures) do
+    for texIdx, texture in ipairs(data.textures or {}) do
         local image = data.images[texture.source + 1]
         if image.uri then
             ret.textures[texIdx] = womf.Texture(dir .. image.uri)
@@ -60,8 +60,13 @@ function gltf.load(filename)
     for matIdx, mat in ipairs(data.materials) do
         assert(mat.pbrMetallicRoughness)
         ret.materials[matIdx] = {
-            albedo = ret.textures[mat.pbrMetallicRoughness.baseColorTexture.index + 1],
-            metallicRoughness = ret.textures[mat.pbrMetallicRoughness.metallicRoughnessTexture.index + 1],
+            albedo = mat.pbrMetallicRoughness.baseColorTexture
+                and ret.textures[mat.pbrMetallicRoughness.baseColorTexture.index + 1],
+            color = mat.pbrMetallicRoughness.baseColorFactor or {1, 1, 1, 1},
+            metallicRoughness = mat.pbrMetallicRoughness.metallicRoughnessTexture and
+                ret.textures[mat.pbrMetallicRoughness.metallicRoughnessTexture.index + 1],
+            metallicFactor = mat.pbrMetallicRoughness.metallicFactor or 1.0,
+            roughnessFactor = mat.pbrMetallicRoughness.roughnessFactor or 1.0,
             normal = mat.normalTexture and ret.textures[mat.normalTexture.index + 1],
             occlusion = mat.occlusionTexture and ret.textures[mat.occlusionTexture.index + 1],
             name = mat.name,
