@@ -40,7 +40,7 @@ end
 -- Do the check to see if JIT is enabled. If so use the optimized FFI structs.
 local status, ffi
 if type(jit) == "table" and jit.status() then
-	--  status, ffi = pcall(require, "ffi")
+	status, ffi = pcall(require, "ffi")
 	if status then
 		ffi.cdef "typedef struct { double _m[16]; } cpml_mat4;"
 		new = ffi.typeof("cpml_mat4")
