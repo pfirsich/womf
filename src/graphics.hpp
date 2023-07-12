@@ -151,10 +151,10 @@ struct Transform : public glwx::Transform {
     void setScale(float x, float y, float z);
 
     std::tuple<float, float, float, float> getOrientation() const;
-    void setOrientation(float w, float x, float y, float z);
+    void setOrientation(float x, float y, float z, float w);
 
-    void rotate(float w, float x, float y, float z);
-    void rotateLocal(float w, float x, float y, float z);
+    void rotate(float x, float y, float z, float w);
+    void rotateLocal(float x, float y, float z, float w);
 
     std::tuple<float, float, float> localToWorld(float x, float y, float z) const;
     std::tuple<float, float, float> getForward() const;

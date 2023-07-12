@@ -321,17 +321,17 @@ std::tuple<float, float, float, float> Transform::getOrientation() const
     return unpack(glwx::Transform::getOrientation());
 }
 
-void Transform::setOrientation(float w, float x, float y, float z)
+void Transform::setOrientation(float x, float y, float z, float w)
 {
     glwx::Transform::setOrientation(glm::quat(w, x, y, z));
 }
 
-void Transform::rotate(float w, float x, float y, float z)
+void Transform::rotate(float x, float y, float z, float w)
 {
     glwx::Transform::rotate(glm::quat(w, x, y, z));
 }
 
-void Transform::rotateLocal(float w, float x, float y, float z)
+void Transform::rotateLocal(float x, float y, float z, float w)
 {
     glwx::Transform::rotateLocal(glm::quat(w, x, y, z));
 }
