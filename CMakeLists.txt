@@ -30,6 +30,7 @@ message(STATUS "LuaJIT Include Dir: ${LUAJIT_INCLUDE_DIR}")
 message(STATUS "LuaJIT Library Dir: ${LUAJIT_LIBRARY_DIR}")
 
 set(SRC
+  animation.cpp
   buffer.cpp
   graphics.cpp
   main.cpp

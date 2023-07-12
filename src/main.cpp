@@ -4,6 +4,7 @@
 #include <cmrc/cmrc.hpp>
 CMRC_DECLARE(luaSource);
 
+#include "animation.hpp"
 #include "buffer.hpp"
 #include "die.hpp"
 #include "graphics.hpp"
@@ -204,6 +205,37 @@ auto bindTransform(sol::state& lua)
     return trafo;
 }
 
+auto bindSampler(sol::state& lua)
+{
+    auto sampler = lua.new_usertype<Sampler>("Sampler", sol::call_constructor,
+        sol::constructors<Sampler(Sampler::Type, Interpolation, Buffer::Ptr, Buffer::Ptr),
+            Sampler(Sampler::Type, Interpolation, BufferView::Ptr, BufferView::Ptr)>());
+    sampler["getType"] = &Sampler::getType;
+    sampler["getDuration"] = &Sampler::getDuration;
+    sampler["getInterpolation"] = &Sampler::getInterpolation;
+    sampler["sample"] = [](sol::this_state L, const Sampler& sampler, float time) {
+        const auto v = sampler.sample(time);
+        // This is a vector. I'd rather make the manual push work but I don't know how.
+        sol::variadic_results res;
+        if (const auto scalar = std::get_if<float>(&v)) {
+            res.emplace_back(L, sol::in_place, *scalar);
+            // return sol::stack::push(L, *scalar);
+        } else if (const auto vec3 = std::get_if<glm::vec3>(&v)) {
+            res.emplace_back(L, sol::in_place, vec3->x);
+            res.emplace_back(L, sol::in_place, vec3->y);
+            res.emplace_back(L, sol::in_place, vec3->z);
+            // return sol::stack::multi_push(L, vec3->x, vec3->y, vec3->z);
+        } else if (const auto quat = std::get_if<glm::quat>(&v)) {
+            fmt::print("quat\n");
+            // return sol::stack::multi_push(L, quat->x, quat->y, quat->z, quat->w);
+        } else {
+            // return 0;
+        }
+        return res;
+    };
+    return sampler;
+}
+
 void bindTypes(sol::state& lua, sol::table table)
 {
     // For some reason I can't get shared_ptr<Buffer(View)> to convert to shared_ptr<BufferBase>
@@ -249,6 +281,17 @@ void bindTypes(sol::state& lua, sol::table table)
     table["Geometry"] = bindGeometry(lua);
 
     table["Transform"] = bindTransform(lua);
+
+    lua.new_enum("InterpolationType", "step", Interpolation::Step, "linear", Interpolation::Linear);
+    table["interp"] = lua["InterpolationType"];
+    lua["InterpolationType"] = sol::nil;
+
+    lua.new_enum("SamplerType", "scalar", Sampler::Type::Scalar, "vec3", Sampler::Type::Vec3,
+        "quat", Sampler::Type::Quat);
+    table["samplerType"] = lua["SamplerType"];
+    lua["SamplerType"] = sol::nil;
+
+    table["Sampler"] = bindSampler(lua);
 }
 
 int solExceptionHandler(
