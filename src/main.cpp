@@ -341,6 +341,15 @@ int solExceptionHandler(
     return sol::stack::push(L, description);
 }
 
+sol::load_result load(sol::state_view lua, const cmrc::file& file, const std::string& moduleName)
+{
+    auto res = lua.load(std::string_view(file.begin(), file.end()), moduleName);
+    if (!res.valid()) {
+        die("{}", res.get<sol::error>().what());
+    }
+    return res;
+}
+
 int main(int argc, char** argv)
 {
     std::vector<std::string_view> args(argv + 1, argv + argc);
@@ -385,19 +394,17 @@ int main(int argc, char** argv)
     glEnable(GL_DEPTH_TEST);
 
     const auto resFs = cmrc::luaSource::get_filesystem();
-    lua.add_package_loader([&resFs](
-                               sol::this_state L, const std::string& moduleName) -> sol::object {
-        std::string path = moduleName;
-        std::replace(path.begin(), path.end(), '.', '/');
-        if (resFs.is_file(path + ".lua")) {
-            auto file = resFs.open(path + ".lua");
-            return sol::state_view(L).load(std::string_view(file.begin(), file.end()), moduleName);
-        } else if (resFs.is_directory(path) && resFs.is_file(path + "/" + "init.lua")) {
-            auto file = resFs.open(path + "/" + "init.lua");
-            return sol::state_view(L).load(std::string_view(file.begin(), file.end()), moduleName);
-        }
-        return sol::nil;
-    });
+    lua.add_package_loader(
+        [&resFs](sol::this_state L, const std::string& moduleName) -> sol::object {
+            std::string path = moduleName;
+            std::replace(path.begin(), path.end(), '.', '/');
+            if (resFs.is_file(path + ".lua")) {
+                return load(L, resFs.open(path + ".lua"), moduleName);
+            } else if (resFs.is_directory(path) && resFs.is_file(path + "/" + "init.lua")) {
+                return load(L, resFs.open(path + "/" + "init.lua"), moduleName);
+            }
+            return sol::nil;
+        });
 
     // Just require this into the global table. I need it *all the time*.
     auto inspectLua = resFs.open("inspect.lua");
