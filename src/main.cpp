@@ -104,18 +104,22 @@ void bindGfx(sol::state&, sol::table table)
 
 auto bindBuffer(sol::state& lua)
 {
-    return lua.new_usertype<Buffer>("Buffer", sol::base_classes, sol::bases<BufferBase>(),
+    auto buffer = lua.new_usertype<Buffer>("Buffer", sol::base_classes, sol::bases<BufferBase>(),
         sol::call_constructor, sol::factories(&Buffer::create<std::string>));
+    buffer["getSize"] = &Buffer::size;
+    return buffer;
 }
 
 auto bindBufferView(sol::state& lua)
 {
-    return lua.new_usertype<BufferView>("BufferView", sol::base_classes, sol::bases<BufferBase>(),
-        sol::call_constructor,
+    auto bufferView = lua.new_usertype<BufferView>("BufferView", sol::base_classes,
+        sol::bases<BufferBase>(), sol::call_constructor,
         sol::factories(
             static_cast<BufferView::Ptr (*)(Buffer::Ptr, size_t, size_t)>(&BufferView::create),
             static_cast<BufferView::Ptr (*)(BufferView::Ptr, size_t, size_t)>(
                 &BufferView::create)));
+    bufferView["getSize"] = &BufferView::size;
+    return bufferView;
 }
 
 auto bindTexture(sol::state& lua)
@@ -236,6 +240,20 @@ auto bindSampler(sol::state& lua)
     return sampler;
 }
 
+extern "C" {
+const void* Buffer_getPointer(const void* obj)
+{
+    const auto buf = reinterpret_cast<const Buffer::Ptr*>(obj);
+    return (*buf)->data().data();
+}
+
+const void* BufferView_getPointer(const void* obj)
+{
+    const auto buf = reinterpret_cast<const BufferView::Ptr*>(obj);
+    return (*buf)->data().data();
+}
+}
+
 void bindTypes(sol::state& lua, sol::table table)
 {
     // For some reason I can't get shared_ptr<Buffer(View)> to convert to shared_ptr<BufferBase>
@@ -243,6 +261,22 @@ void bindTypes(sol::state& lua, sol::table table)
     lua.new_usertype<BufferBase>("BufferBase");
     table["Buffer"] = bindBuffer(lua);
     table["BufferView"] = bindBufferView(lua);
+
+    lua.script(R"(
+        ffi.cdef [[
+        const void* Buffer_getPointer(const void* obj);
+        const void* BufferView_getPointer(const void* obj);
+        ]]
+
+        function womf.Buffer:getPointer()
+            return ffi.C.Buffer_getPointer(self)
+        end
+
+        function womf.BufferView:getPointer()
+            return ffi.C.BufferView_getPointer(self)
+        end
+    )");
+
     table["Shader"] = bindShader(lua);
 
     table["Texture"] = bindTexture(lua);
