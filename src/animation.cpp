@@ -28,7 +28,11 @@ template <typename T>
 T interpolateLinear(const T& a, const T& b, float alpha)
 {
     // Already does slerp for quats!
-    return glm::mix(a, b, alpha);
+    if constexpr (std::is_same_v<T, glm::quat>) {
+        return glm::slerp(a, b, alpha);
+    } else {
+        return glm::mix(a, b, alpha);
+    }
 }
 
 template <typename T, typename Func>
