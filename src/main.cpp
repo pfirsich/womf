@@ -44,6 +44,70 @@ void bindSys(sol::state& lua, sol::table table, const sdlw::GlWindow& window)
     };
 }
 
+void readUniform(
+    UniformSet& uniformSet, const std::string& name, glw::UniformInfo::Type type, sol::object value)
+{
+    switch (type) {
+    case glw::UniformInfo::Type::Float:
+        dieAssert(value.get_type() == sol::type::number, "Value for '{}' must be 'number'", name);
+        uniformSet[name] = value.as<float>();
+        break;
+    case glw::UniformInfo::Type::Int:
+        dieAssert(value.get_type() == sol::type::number, "Value for '{}' must be 'number'", name);
+        uniformSet[name] = value.as<int>();
+        break;
+    case glw::UniformInfo::Type::Vec4: {
+        dieAssert(value.get_type() == sol::type::table, "Value for '{}' must be a 'table'", name);
+        auto table = value.as<sol::table>();
+        dieAssert(table.size() == 4, "Value for '{}' must have 4 elements", name);
+        uniformSet[name] = glm::vec4(table[1], table[2], table[3], table[4]);
+        break;
+    }
+    case glw::UniformInfo::Type::Mat4: {
+        dieAssert(value.get_type() == sol::type::table, "Value for '{}' must be a 'table'", name);
+        auto table = value.as<sol::table>();
+        dieAssert(table.size() == 16, "Value for '{}' must have 16 elements", name);
+        glm::mat4 mat;
+        for (size_t i = 1; i <= 16; ++i) {
+            mat[(i - 1) / 4][(i - 1) % 4] = table[i];
+        }
+        uniformSet[name] = mat;
+        break;
+    }
+    case glw::UniformInfo::Type::Sampler2D:
+        dieAssert(value.is<Texture>(), "Value for '{}' must be 'Texture'", name);
+        uniformSet[name] = &value.as<Texture>().getGlTexture();
+        break;
+    default:
+        die("Uniform of type '{}' not implemented yet", static_cast<GLenum>(type));
+    }
+}
+
+UniformSet readUniforms(
+    const std::unordered_map<std::string, glw::UniformInfo>& uniformInfo, sol::table uniforms)
+{
+    UniformSet uniformSet;
+    for (auto&& [name, value] : uniforms) {
+        const auto nameStr = name.as<std::string>();
+        const auto infoIt = uniformInfo.find(nameStr);
+        if (infoIt == uniformInfo.end()) {
+            continue;
+        }
+        if (infoIt->second.size > 1) {
+            dieAssert(value.get_type() == sol::type::table,
+                "Value for '{}' must be 'table' (array size {})", nameStr, infoIt->second.size);
+            auto table = value.as<sol::table>();
+            for (size_t i = 1; i <= table.size(); ++i) {
+                const auto elemName = fmt::format("{}[{}]", nameStr, i - 1);
+                readUniform(uniformSet, elemName, infoIt->second.type, table[i]);
+            }
+        } else {
+            readUniform(uniformSet, nameStr, infoIt->second.type, value);
+        }
+    }
+    return uniformSet;
+}
+
 void bindGfx(sol::state&, sol::table table)
 {
     table["clear"] = sol::overload(clearColor, clearColorDepth);
@@ -62,43 +126,8 @@ void bindGfx(sol::state&, sol::table table)
 
     // TODO: optional RenderState, optional sortKey
     table["draw"] = [](Shader::Ptr shader, Geometry::Ptr geometry, sol::table uniforms) {
-        const auto& uniformInfo = shader->getProgram().getUniformInfo();
-        UniformSet uniformSet;
-        for (auto&& [name, value] : uniforms) {
-            const auto nameStr = name.as<std::string>();
-            const auto infoIt = uniformInfo.find(nameStr);
-            if (infoIt == uniformInfo.end()) {
-                continue;
-            }
-            switch (infoIt->second.type) {
-            case glw::UniformInfo::Type::Float:
-                dieAssert(value.get_type() == sol::type::number, "Value for '{}' must be 'number'",
-                    nameStr);
-                uniformSet[nameStr] = value.as<float>();
-                break;
-            case glw::UniformInfo::Type::Int:
-                dieAssert(value.get_type() == sol::type::number, "Value for '{}' must be 'number'",
-                    nameStr);
-                uniformSet[nameStr] = value.as<int>();
-                break;
-            case glw::UniformInfo::Type::Vec4: {
-                dieAssert(value.get_type() == sol::type::table, "Value for '{}' must be a 'table'",
-                    nameStr);
-                auto tbl = value.as<sol::table>();
-                dieAssert(tbl.size() == 4, "Value for '{}' must have 4 elements", nameStr);
-                uniformSet[nameStr] = glm::vec4(tbl[1], tbl[2], tbl[3], tbl[4]);
-                break;
-            }
-            case glw::UniformInfo::Type::Sampler2D:
-                dieAssert(value.is<Texture>(), "Value for '{}' must be 'Texture'", nameStr);
-                uniformSet[nameStr] = &value.as<Texture>().getGlTexture();
-                break;
-            default:
-                die("Uniform of type '{}' not implemented yet",
-                    static_cast<GLenum>(infoIt->second.type));
-            }
-        }
-        draw(shader.get(), geometry.get(), uniformSet);
+        draw(shader.get(), geometry.get(),
+            readUniforms(shader->getProgram().getUniformInfo(), uniforms));
     };
 }
 
