@@ -16,7 +16,7 @@ local geom = womf.Geometry(womf.drawMode.triangles)
 geom:addVertexBuffer(fmt, attr)
 geom:setIndexBuffer(womf.attrType.u16, idx)
 
-local scene = gltf.load("assets/Avocado.gltf")
+local scene = womf.loadGltf("assets/Avocado.gltf")
 
 local xRes, yRes = womf.getWindowSize()
 womf.setProjectionMatrix(45, xRes/yRes, 0.1, 100.0)

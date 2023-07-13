@@ -42,9 +42,6 @@ cmrc_add_resource_library(
   lua-source
   NAMESPACE luaSource
   WHENCE src/lua/
-  src/lua/json.lua
-  src/lua/inspect.lua
-  src/lua/gltf.lua
   src/lua/cpml/init.lua
   src/lua/cpml/modules/bound2.lua
   src/lua/cpml/modules/bound3.lua
@@ -62,6 +59,11 @@ cmrc_add_resource_library(
   src/lua/cpml/modules/utils.lua
   src/lua/cpml/modules/vec2.lua
   src/lua/cpml/modules/vec3.lua
+  src/lua/inspect.lua
+  src/lua/json.lua
+
+  src/lua/gltf.lua
+  src/lua/init.lua
 )
 
 add_executable(womf ${SRC})

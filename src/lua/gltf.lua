@@ -1,7 +1,5 @@
 local json = require "json"
 
-local gltf = {}
-
 local pixelTexture = womf.pixelTexture(1, 1, 1, 1)
 
 local function walkNode(node, func)
@@ -35,7 +33,7 @@ local function drawScene(scene, shader, sceneTransform)
     end)
 end
 
-function gltf.load(filename)
+function womf.loadGltf(filename)
     local data = json.decode(womf.readFile(filename))
     assert(#data.scenes == 1)
 
@@ -217,5 +215,3 @@ function gltf.load(filename)
 
     return ret
 end
-
-return gltf

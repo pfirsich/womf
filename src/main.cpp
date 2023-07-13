@@ -373,9 +373,16 @@ int solExceptionHandler(
     return sol::stack::push(L, description);
 }
 
-sol::load_result load(sol::state_view lua, const cmrc::file& file, const std::string& moduleName)
+std::string_view getCmrcFile(const std::string& filename)
 {
-    auto res = lua.load(std::string_view(file.begin(), file.end()), moduleName);
+    static const auto resFs = cmrc::luaSource::get_filesystem();
+    const auto file = resFs.open(filename);
+    return std::string_view(file.begin(), file.end());
+}
+
+sol::load_result load(sol::state_view lua, std::string_view code, const std::string& moduleName)
+{
+    auto res = lua.load(code, moduleName);
     if (!res.valid()) {
         die("{}", res.get<sol::error>().what());
     }
@@ -431,21 +438,12 @@ int main(int argc, char** argv)
             std::string path = moduleName;
             std::replace(path.begin(), path.end(), '.', '/');
             if (resFs.is_file(path + ".lua")) {
-                return load(L, resFs.open(path + ".lua"), moduleName);
+                return load(L, getCmrcFile(path + ".lua"), moduleName);
             } else if (resFs.is_directory(path) && resFs.is_file(path + "/" + "init.lua")) {
-                return load(L, resFs.open(path + "/" + "init.lua"), moduleName);
+                return load(L, getCmrcFile(path + "/" + "init.lua"), moduleName);
             }
-            return sol::nil;
+            return sol::make_object(L, "Module not found");
         });
-
-    // Just require this into the global table. I need it *all the time*.
-    auto inspectLua = resFs.open("inspect.lua");
-    lua["inspect"] = lua.script(std::string_view(inspectLua.begin(), inspectLua.end()));
-    lua["cpml"] = lua["require"]("cpml");
-    lua["vec2"] = lua["cpml"]["vec2"];
-    lua["vec3"] = lua["cpml"]["vec3"];
-    lua["mat4"] = lua["cpml"]["mat4"];
-    lua["quat"] = lua["cpml"]["quat"];
 
     lua["womf"] = lua.create_table();
     bindSys(lua, lua["womf"], *window);
@@ -453,19 +451,20 @@ int main(int argc, char** argv)
     bindTypes(lua, lua["womf"]);
     lua["womf"]["readFile"] = &readFile<std::string>;
 
-    try {
-        auto main = lua.script_file("main.lua");
-        if (!main.valid()) {
-            fmt::print(stderr, "Error: {}\n", main.get<sol::error>().what());
-            return 1;
-        }
-        const auto res = main.get<sol::function>()();
-        if (!res.valid()) {
-            fmt::print(stderr, "Error running main.lua: {}\n", res.get<sol::error>().what());
-            return 1;
-        }
-    } catch (const DieException& exc) {
-        fmt::print(stderr, "{}\n", exc.what());
+    auto init = lua.script(getCmrcFile("init.lua"), "init");
+    if (!init.valid()) {
+        fmt::print(stderr, "Error: {}\n", init.get<sol::error>().what());
+        return 1;
+    }
+
+    auto main = lua.script_file("main.lua");
+    if (!main.valid()) {
+        fmt::print(stderr, "Error: {}\n", main.get<sol::error>().what());
+        return 1;
+    }
+    const auto mainRes = main.get<sol::function>()();
+    if (!mainRes.valid()) {
+        fmt::print(stderr, "Error running main.lua: {}\n", mainRes.get<sol::error>().what());
         return 1;
     }
 
