@@ -15,14 +15,19 @@ local function walkScene(scene, func)
     end
 end
 
+local function getGlobalTransform(node, rootTrafo)
+    rootTrafo = rootTrafo or mat4()
+    local parentTrafo = node.parent and node.parent.fullTransform or rootTrafo
+    local nodeTrafo = mat4(node.transform:getMatrix())
+    node.fullTransform = parentTrafo * nodeTrafo
+    return node.fullTransform
+end
+
 local function drawScene(scene, shader, sceneTransform)
     sceneTransform = sceneTransform and mat4(sceneTransform:getMatrix()) or mat4()
     walkScene(scene, function(node)
         if node.mesh then
-            local parentTrafo = node.parent and node.parent.fullTransform or sceneTransform
-            node.fullTransform = parentTrafo * mat4(node.transform:getMatrix())
-            womf.setModelMatrix(node.fullTransform:unpack())
-
+            womf.setModelMatrix(getGlobalTransform(node, sceneTransform):unpack())
             for _, prim in ipairs(node.mesh.primitives) do
                 womf.draw(shader, prim.geometry, {
                     texture = prim.material.albedo or pixelTexture,
@@ -183,8 +188,7 @@ function womf.loadGltf(filename)
             trafo:setPosition(unpack(node.translation))
         end
         if node.rotation then
-            local x, y, z, w = unpack(node.rotation)
-            trafo:setOrientation(w, x, y, z)
+            trafo:setOrientation(unpack(node.rotation))
         end
         if node.scale then
             trafo:setScale(unpack(node.scale))
