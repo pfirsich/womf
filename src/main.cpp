@@ -259,7 +259,10 @@ auto bindSampler(sol::state& lua)
             res.emplace_back(L, sol::in_place, vec3->z);
             // return sol::stack::multi_push(L, vec3->x, vec3->y, vec3->z);
         } else if (const auto quat = std::get_if<glm::quat>(&v)) {
-            fmt::print("quat\n");
+            res.emplace_back(L, sol::in_place, quat->x);
+            res.emplace_back(L, sol::in_place, quat->y);
+            res.emplace_back(L, sol::in_place, quat->z);
+            res.emplace_back(L, sol::in_place, quat->w);
             // return sol::stack::multi_push(L, quat->x, quat->y, quat->z, quat->w);
         } else {
             // return 0;
