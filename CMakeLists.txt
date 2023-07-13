@@ -62,6 +62,8 @@ cmrc_add_resource_library(
   src/lua/inspect.lua
   src/lua/json.lua
 
+  src/lua/animation.lua
+  src/lua/class.lua
   src/lua/gltf.lua
   src/lua/init.lua
 )

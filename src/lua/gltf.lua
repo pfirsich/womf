@@ -30,12 +30,43 @@ local function drawScene(scene, shader, sceneTransform)
             womf.setModelMatrix(getGlobalTransform(node, sceneTransform):unpack())
             for _, prim in ipairs(node.mesh.primitives) do
                 womf.draw(shader, prim.geometry, {
+                    jointMatrices = node.skin and node.skin.jointMatrices,
                     texture = prim.material.albedo or pixelTexture,
                     color = prim.material.color,
                 })
             end
         end
     end)
+end
+
+local function makeMat4(src)
+    local m = mat4()
+    for i = 1, 16 do
+        m[i] = src[i - 1]
+    end
+    return m
+end
+
+local function updateSkin(skin)
+    local invGlobalTransform = mat4.invert(mat4(), getGlobalTransform(skin.rootNode))
+    for i, joint in ipairs(skin.joints) do
+        local parentTrafo = joint.node.parent and joint.node.parent.fullTransform or mat4()
+        joint.node.fullTransform = parentTrafo * mat4(joint.node.transform:getMatrix())
+        skin.jointMatrices[i] = {(invGlobalTransform * joint.node.fullTransform * joint.inverseBindMatrix):unpack()}
+    end
+end
+
+local function poseSkin(skin, pose)
+    for key, value in pairs(pose) do
+        local bone, component = key:match("([^/]+)/(.+)")
+        local trafo = skin.joints[bone].node.transform
+        if component == "translation" then
+            trafo:setPosition(value:unpack())
+        elseif component == "rotation" then
+            trafo:setOrientation(value:unpack())
+        end
+    end
+    skin:update()
 end
 
 function womf.loadGltf(filename)
@@ -181,6 +212,15 @@ function womf.loadGltf(filename)
         end
     end
 
+    ret.skins = {}
+    for skinIdx, skin in ipairs(data.skins or {}) do
+        ret.skins[skinIdx] = {
+            jointMatrices = {},
+            update = updateSkin,
+            pose = poseSkin,
+        }
+    end
+
     ret.nodes = {}
     for nodeIdx, node in ipairs(data.nodes) do
         local trafo = womf.Transform()
@@ -198,8 +238,43 @@ function womf.loadGltf(filename)
             name = node.name,
             transform = trafo,
             mesh = node.mesh and ret.meshes[node.mesh + 1],
+            skin = (node.mesh and node.skin) and ret.skins[node.skin + 1],
             children = {},
         }
+
+        if node.mesh and node.skin then
+            ret.skins[node.skin + 1].rootNode = ret.nodes[nodeIdx]
+        end
+    end
+
+    for skinIdx, skin in ipairs(data.skins or {}) do
+        local joints = {}
+        for i, nodeIdx in ipairs(skin.joints) do
+            joints[i] = {
+                node = ret.nodes[nodeIdx + 1],
+                inverseBindMatrix = mat4(),
+            }
+            assert(joints[i].node.name)
+            joints[joints[i].node.name] = joints[i]
+        end
+
+        -- if not present inverse bind matrices are all identity matrices
+        if skin.inverseBindMatrices then
+            local accessor = data.accessors[skin.inverseBindMatrices + 1]
+            assert(typeMap[accessor.componentType] == womf.attrType.f32)
+            assert(accessor.type == "MAT4")
+            assert(accessor.count == #skin.joints)
+
+            local bufferView = ret.bufferViews[accessor.bufferView + 1]
+            assert(bufferView:getSize() >= 16 * 4 * accessor.count)
+
+            local ptr = ffi.cast("float*", bufferView:getPointer())
+            for i = 1, #joints do
+                joints[i].inverseBindMatrix = makeMat4(ptr + (i - 1) * 16)
+            end
+        end
+
+        ret.skins[skinIdx].joints = joints
     end
 
     for nodeIdx, node in ipairs(data.nodes) do
@@ -212,6 +287,47 @@ function womf.loadGltf(filename)
 
     for i, nodeIdx in ipairs(data.scenes[1].nodes) do
         ret[i] = ret.nodes[nodeIdx + 1]
+    end
+
+    local interpMap = {
+        STEP = womf.interp.step,
+        LINEAR = womf.interp.linear,
+    }
+
+    local pathAccTypeMap = {
+        translation = "VEC3",
+        rotation = "VEC4",
+        scale = "VEC3",
+    }
+
+    local pathSamplerTypeMap = {
+        translation = womf.samplerType.vec3,
+        rotation = womf.samplerType.quat,
+        scale = womf.samplerType.vec3,
+    }
+
+    ret.animations = {}
+    for animIdx, animation in ipairs(data.animations or {}) do
+        local anim = womf.Animation()
+
+        for _, channel in ipairs(animation.channels) do
+            local key = data.nodes[channel.target.node + 1].name .. "/" .. channel.target.path
+            local sampler = animation.samplers[channel.sampler + 1]
+            local timesAcc = data.accessors[sampler.input + 1]
+            assert(typeMap[timesAcc.componentType] == womf.attrType.f32)
+            assert(timesAcc.type == "SCALAR")
+            local timesBv = ret.bufferViews[timesAcc.bufferView + 1]
+            local valuesAcc = data.accessors[sampler.output + 1]
+            assert(typeMap[valuesAcc.componentType] == womf.attrType.f32)
+            assert(valuesAcc.type == pathAccTypeMap[channel.target.path])
+            local valuesBv = ret.bufferViews[valuesAcc.bufferView + 1]
+            anim:addChannel(key, pathSamplerTypeMap[channel.target.path], interpMap[sampler.interpolation], timesBv, valuesBv)
+        end
+
+        ret.animations[animIdx] = anim
+        if animation.name then
+            ret.animations[animation.name] = anim
+        end
     end
 
     ret.walk = walkScene

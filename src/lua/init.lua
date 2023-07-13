@@ -7,4 +7,6 @@ vec3 = cpml.vec3
 mat4 = cpml.mat4
 quat = cpml.quat
 
+class = require "class"
+require "animation"
 require "gltf"

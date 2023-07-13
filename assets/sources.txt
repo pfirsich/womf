@@ -1,1 +1,2 @@
 Avocado from https://github.com/KhronosGroup/glTF-Sample-Models
+Robot Mike from https://quaternius.com/packs/animatedmech.html and converted with gltf-pipeline
