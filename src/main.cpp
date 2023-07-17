@@ -495,6 +495,12 @@ int main(int argc, char** argv)
         sol::lib::ffi, sol::lib::jit, sol::lib::math, sol::lib::package, sol::lib::string,
         sol::lib::table);
 
+    if (args.size() > 0) {
+        lua["args"] = std::vector<std::string>(args.begin() + 1, args.end());
+    } else {
+        lua["args"] = lua.create_table();
+    }
+
     std::optional<std::string> title;
     std::optional<uint32_t> width;
     std::optional<uint32_t> height;
