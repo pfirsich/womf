@@ -4,18 +4,6 @@
 
 #include <SDL2/SDL_syswm.h>
 
-namespace {
-bool initSubSystem(uint32_t flags)
-{
-    if (SDL_WasInit(flags) == 0) {
-        if (SDL_InitSubSystem(flags) < 0) {
-            return false;
-        }
-    }
-    return true;
-}
-}
-
 namespace sdlw {
 Keycode toKeycode(Scancode scancode)
 {
@@ -374,8 +362,6 @@ bool setClipboardText(const std::string& str)
 
 float getTime()
 {
-    if (!initSubSystem(SDL_INIT_TIMER))
-        return 0.0f;
     static const auto start = SDL_GetPerformanceCounter();
     const auto now = SDL_GetPerformanceCounter();
     return static_cast<float>(now - start) / SDL_GetPerformanceFrequency();
@@ -494,14 +480,6 @@ void* Window::getNativeDisplayHandle()
 bool Window::init(
     const std::string& title, uint32_t width, uint32_t height, const WindowProperties& props)
 {
-    if (Sdl::instance().getResult() < 0) {
-        return false;
-    }
-
-    if (!initSubSystem(SDL_INIT_VIDEO)) {
-        return false;
-    }
-
     uint32_t flags = 0;
     flags |= (props.openGl ? SDL_WINDOW_OPENGL : 0);
     const auto fs = props.fullscreen;
@@ -577,14 +555,6 @@ SDL_GLContext GlWindow::getSdlGlContext() const
 bool GlWindow::init(const std::string& title, uint32_t width, uint32_t height,
     const WindowProperties& windowProps, const ContextProperties& contextProps)
 {
-    if (Sdl::instance().getResult() < 0) {
-        return false;
-    }
-
-    if (!initSubSystem(SDL_INIT_VIDEO)) {
-        return false;
-    }
-
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, contextProps.contextMajor);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, contextProps.contextMinor);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);

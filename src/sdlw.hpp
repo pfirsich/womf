@@ -18,24 +18,38 @@
  */
 
 namespace sdlw {
+// This only includes the one I currently support
+enum class SubSystem : uint32_t {
+    Timer = SDL_INIT_TIMER,
+    Video = SDL_INIT_VIDEO,
+    Joystick = SDL_INIT_JOYSTICK,
+    GameController = SDL_INIT_GAMECONTROLLER,
+    Events = SDL_INIT_EVENTS,
+    Everything = SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER
+        | SDL_INIT_EVENTS,
+};
+
 class Sdl {
 public:
-    static Sdl& instance()
+    template <typename... Args>
+    Sdl(Args&&... systems)
+        : flags_((... | static_cast<uint32_t>(systems)))
     {
-        static Sdl sdl;
-        return sdl;
+        result_ = SDL_InitSubSystem(flags_);
     }
 
-    ~Sdl() { SDL_Quit(); }
+    ~Sdl() { SDL_QuitSubSystem(flags_); }
 
-    int getResult() const { return result_; }
+    operator int() const { return result_; }
 
 private:
-    Sdl() { result_ = SDL_Init(0); }
     Sdl(const Sdl&) = delete;
+    Sdl(Sdl&&) = delete;
     Sdl& operator=(const Sdl&) = delete;
+    Sdl& operator=(Sdl&&) = delete;
 
     // SDL_Init returns 0 on success and < 0 on error
+    uint32_t flags_ = 0;
     int result_ = -1;
 };
 

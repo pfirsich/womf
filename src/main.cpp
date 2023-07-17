@@ -518,6 +518,11 @@ int main(int argc, char** argv)
 
     // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
 
+    sdlw::Sdl sdl(sdlw::SubSystem::Everything);
+    if (sdl < 0) {
+        fmt::print(stderr, "Could not initialize SDL: {}\n", sdlw::getError());
+        return 1;
+    }
     const auto window = sdlw::GlWindow::create(
         title.value_or("womf"), width.value_or(1024), height.value_or(768), { .resizable = true });
     if (!window) {
