@@ -30,7 +30,7 @@ local function main()
         for event in womf.pollEvent() do
             if event.type == "quit" then
                 return
-            elseif event.type == "keydown" and event.symbol == 27 then
+            elseif event.type == "keydown" and event.symbol == "escape" then
                 return
             end
         end

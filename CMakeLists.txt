@@ -33,6 +33,7 @@ set(SRC
   animation.cpp
   buffer.cpp
   graphics.cpp
+  keys.cpp
   main.cpp
   sdlw.cpp
 )

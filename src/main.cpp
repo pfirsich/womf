@@ -11,6 +11,49 @@ CMRC_DECLARE(luaSource);
 #include "sdlw.hpp"
 #include "util.hpp"
 
+const std::unordered_map<std::string, sdlw::Keycode>& getKeycodeMap();
+const std::unordered_map<sdlw::Keycode, std::string>& getInvKeycodeMap();
+
+sdlw::Keycode getKeycode(const std::string& key)
+{
+    const auto it = getKeycodeMap().find(key);
+    if (it == getKeycodeMap().end()) {
+        die("Invalid key '{}'", key);
+    }
+    return it->second;
+}
+
+struct InputState {
+    bool down = false;
+    bool pressed = false;
+    bool released = false;
+};
+
+std::array<InputState, SDL_NUM_SCANCODES> keyboardState;
+
+InputState& getKeyState(sdlw::Scancode scancode)
+{
+    return keyboardState[static_cast<int>(scancode)];
+}
+
+InputState& getMouseState(const std::string& button)
+{
+    static std::array<InputState, 5> state;
+    if (button == "l") {
+        return state[0];
+    } else if (button == "m") {
+        return state[1];
+    } else if (button == "r") {
+        return state[2];
+    } else if (button == "x1") {
+        return state[3];
+    } else if (button == "x2") {
+        return state[4];
+    }
+    die("Invalid mouse button '{}'", button);
+    return state[0]; // Just for the compiler
+}
+
 void bindSys(sol::state& lua, sol::table table, const sdlw::GlWindow& window)
 {
     table["getTime"] = &sdlw::getTime;
@@ -22,24 +65,73 @@ void bindSys(sol::state& lua, sol::table table, const sdlw::GlWindow& window)
         const auto [w, h] = window.getSize();
         return std::tuple { w, h };
     };
-    table["isDown"] = [](int key) { return sdlw::isDown(static_cast<sdlw::Keycode>(key)); };
+
+    table["isMouseDown"] = [](const std::string& button) { return getMouseState(button).down; };
+    table["isMousePressed"]
+        = [](const std::string& button) { return getMouseState(button).pressed; };
+    table["isMouseReleased"]
+        = [](const std::string& button) { return getMouseState(button).released; };
+
+    table["getKeyFromScancode"] = [](int scancode) {
+        return getInvKeycodeMap().at(sdlw::toKeycode(static_cast<sdlw::Scancode>(scancode)));
+    };
+    table["getScancodeFromKey"] = [](const std::string& key) {
+        return static_cast<int>(sdlw::toScancode(getKeycode(key)));
+    };
+
+    table["isKeyDown"] = sol::overload(
+        [](const std::string& key) { return getKeyState(toScancode(getKeycode(key))).down; },
+        [](int scancode) { return getKeyState(static_cast<sdlw::Scancode>(scancode)).down; });
+    table["isKeyPressed"] = sol::overload(
+        [](const std::string& key) { return getKeyState(toScancode(getKeycode(key))).pressed; },
+        [](int scancode) { return getKeyState(static_cast<sdlw::Scancode>(scancode)).pressed; });
+    table["isKeyReleased"] = sol::overload(
+        [](const std::string& key) { return getKeyState(toScancode(getKeycode(key))).released; },
+        [](int scancode) { return getKeyState(static_cast<sdlw::Scancode>(scancode)).released; });
+
     table["pollEvent"] = [&lua]() {
+        for (auto& state : keyboardState) {
+            state.pressed = false;
+            state.released = false;
+        }
+
         return [&lua]() -> sol::object {
-            const auto event = sdlw::pollEvent();
-            if (!event) {
-                return sol::nil;
+            while (true) {
+                const auto event = sdlw::pollEvent();
+                if (!event) {
+                    return sol::nil;
+                }
+                if (const auto quit = std::get_if<sdlw::events::Quit>(&*event)) {
+                    return lua.create_table_with("type", "quit");
+                } else if (const auto keydown = std::get_if<sdlw::events::KeyDown>(&*event)) {
+                    if (!keydown->repeat) {
+                        keyboardState[static_cast<int>(keydown->key.scancode)].pressed = true;
+                        keyboardState[static_cast<int>(keydown->key.scancode)].down = true;
+
+                        // There is some bug in lua.create_table_with, that will make it segfault if
+                        // I pass all the values (the address of the last boolean will be 0x8).
+                        auto event = lua.create_table_with("type", "keydown");
+                        event["symbol"] = getInvKeycodeMap().at(keydown->key.symbol);
+                        event["scancode"] = static_cast<int>(keydown->key.scancode);
+                        event["isrepeat"] = keydown->repeat;
+                        return event;
+                    }
+                } else if (const auto keyup = std::get_if<sdlw::events::KeyUp>(&*event)) {
+                    if (!keyup->repeat) {
+                        keyboardState[static_cast<int>(keyup->key.scancode)].released = true;
+                        keyboardState[static_cast<int>(keyup->key.scancode)].down = false;
+
+                        auto event = lua.create_table_with("type", "keyup");
+                        event["symbol"] = getInvKeycodeMap().at(keyup->key.symbol);
+                        event["scancode"] = static_cast<int>(keyup->key.scancode);
+                        event["isrepeat"] = keyup->repeat;
+                        return event;
+                    }
+                } else if (const auto resized = std::get_if<sdlw::events::WindowResized>(&*event)) {
+                    return lua.create_table_with("type", "windowresized", "width", resized->width,
+                        "height", resized->height);
+                }
             }
-            if (const auto quit = std::get_if<sdlw::events::Quit>(&*event)) {
-                return lua.create_table_with("type", "quit");
-            } else if (const auto keydown = std::get_if<sdlw::events::KeyDown>(&*event)) {
-                return lua.create_table_with("type", "keydown", "symbol",
-                    static_cast<int>(keydown->key.symbol), "scancode",
-                    static_cast<int>(keydown->key.scancode));
-            } else if (const auto resized = std::get_if<sdlw::events::WindowResized>(&*event)) {
-                return lua.create_table_with(
-                    "type", "windowresized", "width", resized->width, "height", resized->height);
-            }
-            return sol::nil;
         };
     };
 }

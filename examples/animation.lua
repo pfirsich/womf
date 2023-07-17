@@ -29,9 +29,9 @@ local function main()
             if event.type == "quit" then
                 return
             elseif event.type == "keydown" then
-                if event.symbol == 27 then
+                if event.symbol == "escape" then
                     return
-                elseif event.symbol == 32 then
+                elseif event.symbol == "space" then
                     animationIndex = (animationIndex % #animations) + 1
                 end
             end

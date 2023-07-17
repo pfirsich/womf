@@ -49,10 +49,29 @@ local function fadeInOut(time, duration, fadeIn, fadeOut)
 end
 
 local function update(dt)
-    -- up minus down
-    local input = (womf.isDown(1073741906) and 1 or 0) - (womf.isDown(1073741905) and 1 or 0)
+    local input = (womf.isKeyDown("up") and 1 or 0) - (womf.isKeyDown("down") and 1 or 0)
     if input ~= 0 then
         runSpeed = math.min(math.max(runSpeed + input * dt * 0.5, 0.0), 1.0)
+        print(runSpeed)
+    end
+    if womf.isKeyPressed("plus") then
+        runSpeed = math.min(math.max(runSpeed + 0.1, 0.0), 1.0)
+        print(runSpeed)
+    end
+    if womf.isKeyPressed("minus") then
+        runSpeed = math.min(math.max(runSpeed - 0.1, 0.0), 1.0)
+        print(runSpeed)
+    end
+    if womf.isKeyPressed("i") then
+        runSpeed = 0.0
+        print(runSpeed)
+    end
+    if womf.isKeyPressed("w") then
+        runSpeed = 0.5
+        print(runSpeed)
+    end
+    if womf.isKeyPressed("r") then
+        runSpeed = 1.0
         print(runSpeed)
     end
 
@@ -64,6 +83,11 @@ local function update(dt)
         mixer:setWeights({idle = 0, walk = 1 - t, run = t})
     end
 
+    -- shooting
+    if womf.isKeyPressed("space") then
+        mixer:stop("shoot")
+        mixer:play("shoot")
+    end
     mixer:setLayerAlpha(2, fadeInOut(mixer:tell("shoot"), mixer.animations["shoot"].duration, 0.1, 0.1))
 
     local pose = mixer:update(dt)
@@ -83,31 +107,8 @@ local function main()
             print("event", event.type)
             if event.type == "quit" then
                 return
-            elseif event.type == "windowresized" then
-                print("window resized", event.width, event.height)
-            elseif event.type == "keydown" then
-                print(inspect(event))
-                if event.symbol == 27 then
-                    return
-                elseif event.symbol == 43 then -- +
-                    runSpeed = math.min(math.max(runSpeed + 0.1, 0.0), 1.0)
-                    print(runSpeed)
-                elseif event.symbol == 45 then -- -
-                    runSpeed = math.min(math.max(runSpeed - 0.1, 0.0), 1.0)
-                    print(runSpeed)
-                elseif event.symbol == 105 then -- i
-                    runSpeed = 0.0
-                    print(runSpeed)
-                elseif event.symbol == 119 then -- w
-                    runSpeed = 0.5
-                    print(runSpeed)
-                elseif event.symbol == 114 then -- r
-                    runSpeed = 1.0
-                    print(runSpeed)
-                elseif event.symbol == 32 then
-                    mixer:stop("shoot")
-                    mixer:play("shoot")
-                end
+            elseif event.type == "keydown" and event.symbol == "escape" then
+                return
             end
         end
 
