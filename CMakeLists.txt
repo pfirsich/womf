@@ -70,7 +70,6 @@ cmrc_add_resource_library(
 )
 
 add_executable(womf ${SRC})
-target_include_directories(womf PRIVATE deps/sol_v3.3.0)
 target_include_directories(womf PRIVATE include)
 target_link_libraries(womf PRIVATE sol2)
 target_link_libraries(womf PRIVATE fmt::fmt)
