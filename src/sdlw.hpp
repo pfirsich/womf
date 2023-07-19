@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <variant>
@@ -51,41 +52,6 @@ private:
     // SDL_Init returns 0 on success and < 0 on error
     uint32_t flags_ = 0;
     int result_ = -1;
-};
-
-enum class ControllerButton {
-    Invalid = SDL_CONTROLLER_BUTTON_INVALID,
-    A = SDL_CONTROLLER_BUTTON_A,
-    B = SDL_CONTROLLER_BUTTON_B,
-    X = SDL_CONTROLLER_BUTTON_X,
-    Y = SDL_CONTROLLER_BUTTON_Y,
-    Back = SDL_CONTROLLER_BUTTON_BACK,
-    Guide = SDL_CONTROLLER_BUTTON_GUIDE,
-    Start = SDL_CONTROLLER_BUTTON_START,
-    LeftStick = SDL_CONTROLLER_BUTTON_LEFTSTICK,
-    RightStick = SDL_CONTROLLER_BUTTON_RIGHTSTICK,
-    LeftShoulder = SDL_CONTROLLER_BUTTON_LEFTSHOULDER,
-    RightShoulder = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER,
-    DpadUp = SDL_CONTROLLER_BUTTON_DPAD_UP,
-    DpadDown = SDL_CONTROLLER_BUTTON_DPAD_DOWN,
-    DpadLeft = SDL_CONTROLLER_BUTTON_DPAD_LEFT,
-    DpadRight = SDL_CONTROLLER_BUTTON_DPAD_RIGHT,
-    Misc1 = SDL_CONTROLLER_BUTTON_MISC1,
-    Paddle1 = SDL_CONTROLLER_BUTTON_PADDLE1,
-    Paddle2 = SDL_CONTROLLER_BUTTON_PADDLE2,
-    Paddle3 = SDL_CONTROLLER_BUTTON_PADDLE3,
-    Paddle4 = SDL_CONTROLLER_BUTTON_PADDLE4,
-    Touchpad = SDL_CONTROLLER_BUTTON_TOUCHPAD,
-};
-
-enum class ControllerAxis {
-    Invalid = SDL_CONTROLLER_AXIS_INVALID,
-    LeftX = SDL_CONTROLLER_AXIS_LEFTX,
-    LeftY = SDL_CONTROLLER_AXIS_LEFTY,
-    RightX = SDL_CONTROLLER_AXIS_RIGHTX,
-    RightY = SDL_CONTROLLER_AXIS_RIGHTY,
-    TriggerLeft = SDL_CONTROLLER_AXIS_TRIGGERLEFT,
-    TriggerRight = SDL_CONTROLLER_AXIS_TRIGGERRIGHT,
 };
 
 enum class ButtonState {
@@ -692,6 +658,153 @@ bool getRelativeMouseMode();
 bool setCursorVisible(bool visible);
 bool isCursorVisible();
 
+/*
+ * The joystick/controller API is pretty different from the SDL2 API, because I don't like it very
+ * much and because we have better ways to deal with ownership in C++.
+ * Instead of having a hidden array of devices that I can then open as either joystick or
+ * controller, I just have a function that gives you a bunch of joysticks, which are optionally also
+ * controllers.
+ */
+
+enum class ControllerButton {
+    Invalid = SDL_CONTROLLER_BUTTON_INVALID,
+    A = SDL_CONTROLLER_BUTTON_A,
+    B = SDL_CONTROLLER_BUTTON_B,
+    X = SDL_CONTROLLER_BUTTON_X,
+    Y = SDL_CONTROLLER_BUTTON_Y,
+    Back = SDL_CONTROLLER_BUTTON_BACK,
+    Guide = SDL_CONTROLLER_BUTTON_GUIDE,
+    Start = SDL_CONTROLLER_BUTTON_START,
+    LeftStick = SDL_CONTROLLER_BUTTON_LEFTSTICK,
+    RightStick = SDL_CONTROLLER_BUTTON_RIGHTSTICK,
+    LeftShoulder = SDL_CONTROLLER_BUTTON_LEFTSHOULDER,
+    RightShoulder = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER,
+    DpadUp = SDL_CONTROLLER_BUTTON_DPAD_UP,
+    DpadDown = SDL_CONTROLLER_BUTTON_DPAD_DOWN,
+    DpadLeft = SDL_CONTROLLER_BUTTON_DPAD_LEFT,
+    DpadRight = SDL_CONTROLLER_BUTTON_DPAD_RIGHT,
+
+    // Xbox Series X share button, PS5 microphone button, Nintendo Switch Pro capture button, Amazon
+    // Luna microphone button
+    Misc1 = SDL_CONTROLLER_BUTTON_MISC1,
+    Paddle1 = SDL_CONTROLLER_BUTTON_PADDLE1, // Xbox Elite paddle P1
+    Paddle2 = SDL_CONTROLLER_BUTTON_PADDLE2, // Xbox Elite paddle P3
+    Paddle3 = SDL_CONTROLLER_BUTTON_PADDLE3, // Xbox Elite paddle P2
+    Paddle4 = SDL_CONTROLLER_BUTTON_PADDLE4, // Xbox Elite paddle P4
+    Touchpad = SDL_CONTROLLER_BUTTON_TOUCHPAD, // PS4/PS5 touchpad button
+};
+
+std::string_view toString(ControllerButton button);
+ControllerButton controllerButtonFromString(const std::string& str);
+
+enum class ControllerAxis {
+    Invalid = SDL_CONTROLLER_AXIS_INVALID,
+    Leftx = SDL_CONTROLLER_AXIS_LEFTX,
+    Lefty = SDL_CONTROLLER_AXIS_LEFTY,
+    Rightx = SDL_CONTROLLER_AXIS_RIGHTX,
+    Righty = SDL_CONTROLLER_AXIS_RIGHTY,
+    LeftTrigger = SDL_CONTROLLER_AXIS_TRIGGERLEFT,
+    RightTrigger = SDL_CONTROLLER_AXIS_TRIGGERRIGHT,
+};
+
+std::string_view toString(ControllerAxis axis);
+ControllerAxis controllerAxisFromString(const std::string& str);
+
+enum class JoystickPowerLevel {
+    Unknown = SDL_JOYSTICK_POWER_UNKNOWN,
+    Empty = SDL_JOYSTICK_POWER_EMPTY, /* <= 5% */
+    Low = SDL_JOYSTICK_POWER_LOW, /* <= 20% */
+    Medium = SDL_JOYSTICK_POWER_MEDIUM, /* <= 70% */
+    Full = SDL_JOYSTICK_POWER_FULL, /* <= 100% */
+    Wired = SDL_JOYSTICK_POWER_WIRED,
+};
+
+enum class AddMappingResult {
+    MappingAdded,
+    MappindUpdated,
+    Error,
+};
+
+int addControllerMappings(const std::string& mappings);
+// AddMappingResult addControllerMapping(const std::string& mapping);
+// std::vector<std::string> getControllerMappings();
+// std::string getControllerMapping(const std::string& joystickGuid);
+
+class Joystick {
+public:
+    using Ptr = std::shared_ptr<Joystick>;
+
+    // I thought about how to make this inaccessible to user code, but it's not worth the effort.
+    // Do not consider this part of the public interface, even though it is.
+    static Ptr internalOpen(int devinceIndex);
+
+    ~Joystick() { close(); }
+    Joystick(const Joystick&) = delete;
+    Joystick& operator=(const Joystick&) = delete;
+    Joystick(Joystick&& other) = delete;
+    Joystick& operator=(Joystick&& other) = delete;
+
+    SDL_Joystick* getSdlJoystick();
+    SDL_GameController* getSdlController();
+
+    bool isOpen() const;
+    void close();
+
+    bool isConnected() const;
+    // JoystickType getType() const;
+
+    // float getAxis(int axis) const;
+    // int getNumAxes() const; // negative on error
+    // JoystickHatPosition getHat(int hat) const; // bitmask, see SDL_HAT_*
+    // int getNumHats() const; // negative on error
+    // bool getButton(int button) const;
+    // int getNumButtons() const; // negative on error
+
+    // uint16_t getVendorId() const;
+    // uint16_t getProductId() const;
+    // uint16_t getProductVersion() const;
+    // uint16_t getFirmwareVersion() const;
+    // std::string getSerialNumber() const;
+    // std::string getName() const;
+    // std::string getPath() const;
+
+    // The ID (or "instance id" in SDL2 terms) is an identifier that will be unique for every
+    // connected joystick. It is also changed when a joystick is reconnected.
+    SDL_JoystickID getId() const;
+    // The GUID is a platform-dependent identifier that is constant and unique for the type of
+    // physical joystick
+    SDL_JoystickGUID getGuid() const;
+    std::string getGuidString() const;
+
+    // int getPlayerIndex() const; // -1 if not available
+    // void setPlayerIndex(int index) const; // -1 to clear
+
+    // bool hasRumble() const;
+    // bool rumble(uint16_t lowFrequency, uint16_t highFrequency, uint32_t durationMs) const;
+    // bool hasRumbleTriggers() const;
+    // bool rumbleTriggers(uint16_t left, uint16_t right, uint32_t durationMs) const;
+    // bool hasLed() const;
+    // bool setLed(uint8_t r, uint8_t g, uint8_t b) const;
+    // JoystickPowerLevel getPowerLevel() const;
+
+    // GameController API
+    bool isController() const;
+    // ControllerType getControllerType() const;
+    float getAxis(ControllerAxis axis) const;
+    bool getButton(ControllerButton button) const;
+
+private:
+    Joystick() = default;
+    bool open(int index);
+
+    SDL_Joystick* joystick_ = nullptr;
+    SDL_GameController* controller_ = nullptr;
+    SDL_JoystickID id_ = -1;
+};
+
+std::vector<Joystick::Ptr> getJoysticks();
+Joystick::Ptr getJoystick(SDL_JoystickID id);
+
 struct KeySymbol {
     Scancode scancode;
     Keycode symbol;
@@ -751,52 +864,55 @@ namespace events {
         uint32_t windowId;
     };
 
-    struct ControllerDeviceAdded {
-        int32_t joystickDeviceIndex;
-    };
+    // These are not emitted, just the joystick versions! Because I only provide a Joystick
+    // abstraction (no separate abstractions).
+    // struct ControllerDeviceAdded { };
+    // struct ControllerDeviceRemoved { };
 
-    struct ControllerDeviceRemoved {
-        SDL_JoystickID instanceId;
-    };
-
-    struct ControllerDevicedRemapped {
-        SDL_JoystickID instanceId;
+    struct ControllerRemapped {
+        Joystick::Ptr joystick;
     };
 
     struct ControllerButtonDown {
-        SDL_JoystickID joystick;
+        Joystick::Ptr joystick;
         ControllerButton button;
         ButtonState state;
     };
 
     struct ControllerButtonUp {
-        SDL_JoystickID joystick;
+        Joystick::Ptr joystick;
         ControllerButton button;
         ButtonState state;
     };
 
     struct ControllerAxisMoved {
-        SDL_JoystickID joystick;
+        Joystick::Ptr joystick;
         ControllerAxis axis;
-        int16_t value;
+        float value;
     };
 
     struct JoystickAdded {
-        int32_t joystickDeviceIndex;
+        Joystick::Ptr joystick;
     };
 
     struct JoystickRemoved {
-        SDL_JoystickID instanceId;
+        Joystick::Ptr joystick;
+    };
+
+    struct JoystickAxisMoved {
+        Joystick::Ptr joystick;
+        uint8_t axis;
+        float value;
     };
 
     struct JoystickButtonDown {
-        SDL_JoystickID instanceId;
+        Joystick::Ptr joystick;
         uint8_t button;
         ButtonState state;
     };
 
     struct JoystickButtonUp {
-        SDL_JoystickID instanceId;
+        Joystick::Ptr joystick;
         uint8_t button;
         ButtonState state;
     };
@@ -864,12 +980,12 @@ namespace events {
 using Event = std::variant<events::Quit, events::WindowMoved, events::WindowResized,
     events::WindowSizeChanged, events::WindowMinimized, events::WindowMaximized,
     events::WindowRestored, events::WindowEnter, events::WindowLeave, events::WindowFocusGained,
-    events::WindowFocusLost, events::WindowClose, events::ControllerDeviceAdded,
-    events::ControllerDeviceRemoved, events::ControllerDevicedRemapped,
+    events::WindowFocusLost, events::WindowClose, events::ControllerRemapped,
     events::ControllerButtonDown, events::ControllerButtonUp, events::ControllerAxisMoved,
-    events::JoystickAdded, events::JoystickRemoved, events::JoystickButtonDown,
-    events::JoystickButtonUp, events::MouseWheel, events::MouseButtonDown, events::MouseButtonUp,
-    events::MouseMotion, events::KeyDown, events::KeyUp>;
+    events::JoystickAdded, events::JoystickRemoved, events::JoystickAxisMoved,
+    events::JoystickButtonDown, events::JoystickButtonUp, events::MouseWheel,
+    events::MouseButtonDown, events::MouseButtonUp, events::MouseMotion, events::KeyDown,
+    events::KeyUp>;
 
 namespace detail {
     template <class... Ts>

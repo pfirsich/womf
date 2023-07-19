@@ -96,14 +96,45 @@ void bindSys(sol::state& lua, sol::table table, const sdlw::GlWindow& window)
         }
 
         return [&lua]() -> sol::object {
+            using namespace sdlw::events;
+
             while (true) {
                 const auto event = sdlw::pollEvent();
                 if (!event) {
                     return sol::nil;
                 }
-                if (const auto quit = std::get_if<sdlw::events::Quit>(&*event)) {
+                if (const auto quit = std::get_if<Quit>(&*event)) {
                     return lua.create_table_with("type", "quit");
-                } else if (const auto keydown = std::get_if<sdlw::events::KeyDown>(&*event)) {
+                } else if (const auto resized = std::get_if<WindowResized>(&*event)) {
+                    return lua.create_table_with("type", "windowresized", "width", resized->width,
+                        "height", resized->height);
+                } else if (const auto ctrlButtonDown = std::get_if<ControllerButtonDown>(&*event)) {
+                    return lua.create_table_with("type", "controllerbuttondown", "joystick",
+                        ctrlButtonDown->joystick, "button", sdlw::toString(ctrlButtonDown->button));
+                } else if (const auto ctrlButtonUp = std::get_if<ControllerButtonUp>(&*event)) {
+                    return lua.create_table_with("type", "controllerbuttonup", "joystick",
+                        ctrlButtonUp->joystick, "button", sdlw::toString(ctrlButtonUp->button));
+                } else if (const auto ctrlAxisMoved = std::get_if<ControllerAxisMoved>(&*event)) {
+                    return lua.create_table_with("type", "controlleraxismoved", "joystick",
+                        ctrlAxisMoved->joystick, "axis", sdlw::toString(ctrlAxisMoved->axis),
+                        "value", ctrlAxisMoved->value);
+                } else if (const auto joyAdded = std::get_if<JoystickAdded>(&*event)) {
+                    return lua.create_table_with(
+                        "type", "joystickadded", "joystick", joyAdded->joystick);
+                } else if (const auto joyRemoved = std::get_if<JoystickRemoved>(&*event)) { // :(
+                    return lua.create_table_with(
+                        "type", "joystickremoved", "joystick", joyRemoved->joystick);
+                } else if (const auto joyButtonDown = std::get_if<JoystickButtonDown>(&*event)) {
+                    return lua.create_table_with("type", "joystickbuttondown", "joystick",
+                        joyButtonDown->joystick, "button", joyButtonDown->button);
+                } else if (const auto joyButtonUp = std::get_if<JoystickButtonUp>(&*event)) {
+                    return lua.create_table_with("type", "joystickbuttonup", "joystick",
+                        joyButtonUp->joystick, "button", joyButtonUp->button);
+                } else if (const auto joyAxisMoved = std::get_if<JoystickAxisMoved>(&*event)) {
+                    return lua.create_table_with("type", "joystickaxismoved", "joystick",
+                        joyAxisMoved->joystick, "axis", joyAxisMoved->axis, "value",
+                        joyAxisMoved->value);
+                } else if (const auto keydown = std::get_if<KeyDown>(&*event)) {
                     if (!keydown->repeat) {
                         keyboardState[static_cast<int>(keydown->key.scancode)].pressed = true;
                         keyboardState[static_cast<int>(keydown->key.scancode)].down = true;
@@ -116,7 +147,7 @@ void bindSys(sol::state& lua, sol::table table, const sdlw::GlWindow& window)
                         event["isrepeat"] = keydown->repeat;
                         return event;
                     }
-                } else if (const auto keyup = std::get_if<sdlw::events::KeyUp>(&*event)) {
+                } else if (const auto keyup = std::get_if<KeyUp>(&*event)) {
                     if (!keyup->repeat) {
                         keyboardState[static_cast<int>(keyup->key.scancode)].released = true;
                         keyboardState[static_cast<int>(keyup->key.scancode)].down = false;
@@ -127,13 +158,32 @@ void bindSys(sol::state& lua, sol::table table, const sdlw::GlWindow& window)
                         event["isrepeat"] = keyup->repeat;
                         return event;
                     }
-                } else if (const auto resized = std::get_if<sdlw::events::WindowResized>(&*event)) {
-                    return lua.create_table_with("type", "windowresized", "width", resized->width,
-                        "height", resized->height);
                 }
             }
         };
     };
+
+    auto joystick = lua.new_usertype<sdlw::Joystick>("Joystick");
+    joystick["isConnected"] = &sdlw::Joystick::isConnected;
+    joystick["getId"] = &sdlw::Joystick::getId;
+    joystick["isController"] = &sdlw::Joystick::isController;
+    joystick["getButton"]
+        = [](const sdlw::Joystick& joystick, const std::string& controllerButton) {
+              return joystick.getButton(sdlw::controllerButtonFromString(controllerButton));
+          };
+    joystick["getAxis"] = [](const sdlw::Joystick& joystick, const std::string& controllerAxis) {
+        return joystick.getAxis(sdlw::controllerAxisFromString(controllerAxis));
+    };
+
+    // I thought about storing weak references to the joystick objects in the registry, so I can
+    // return the same userdata object for the same joystick object for every call to getJoystick(s)
+    // (and for every joystick event), but it seems sol2 overrides __eq for me so that userdata will
+    // be equal if the shared_ptr they contain points to the same object.
+    // This has some additional overhead from creating a new shared_ptr every time (esp. relevant
+    // for events), but apart from that it *just works*, which is very rad and certainly good enough
+    // for now!
+    table["getJoysticks"] = []() { return sol::as_table(sdlw::getJoysticks()); };
+    table["getJoystick"] = &sdlw::getJoystick;
 }
 
 void readUniform(

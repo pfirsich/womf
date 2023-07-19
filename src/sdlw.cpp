@@ -1,5 +1,6 @@
 #include "sdlw.hpp"
 
+#include <cassert>
 #include <utility>
 
 #include <SDL2/SDL_syswm.h>
@@ -18,7 +19,7 @@ Scancode toScancode(Keycode key)
 bool isDown(Scancode scancode)
 {
     static int numKeys = 0;
-    static auto state = SDL_GetKeyboardState(&numKeys);
+    static const auto state = SDL_GetKeyboardState(&numKeys);
     const auto idx = static_cast<SDL_Scancode>(scancode);
     return idx < numKeys && state[idx] > 0;
 }
@@ -69,6 +70,189 @@ bool setCursorVisible(bool visible)
 bool isCursorVisible()
 {
     return SDL_ShowCursor(SDL_QUERY) == SDL_ENABLE;
+}
+
+std::string_view toString(ControllerButton button)
+{
+    return std::string_view(
+        SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(button)));
+}
+
+ControllerButton controllerButtonFromString(const std::string& str)
+{
+    return static_cast<ControllerButton>(SDL_GameControllerGetButtonFromString(str.c_str()));
+}
+
+std::string_view toString(ControllerAxis axis)
+{
+    return std::string_view(
+        SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(axis)));
+}
+
+ControllerAxis controllerAxisFromString(const std::string& str)
+{
+    return static_cast<ControllerAxis>(SDL_GameControllerGetAxisFromString(str.c_str()));
+}
+
+int addControllerMappings(const std::string& mappings)
+{
+    const auto rw = SDL_RWFromConstMem(mappings.data(), mappings.size());
+    return SDL_GameControllerAddMappingsFromRW(rw, 1);
+}
+
+Joystick::Ptr Joystick::internalOpen(int deviceIndex)
+{
+    auto joystick = Joystick::Ptr(new Joystick());
+    if (!joystick->open(deviceIndex)) {
+        return nullptr;
+    }
+    return joystick;
+}
+
+SDL_Joystick* Joystick::getSdlJoystick()
+{
+    return joystick_;
+}
+
+SDL_GameController* Joystick::getSdlController()
+{
+    return controller_;
+}
+
+bool Joystick::isOpen() const
+{
+    return joystick_ != nullptr;
+}
+
+void Joystick::close()
+{
+    if (controller_) {
+        SDL_GameControllerClose(controller_);
+    } else if (joystick_) {
+        SDL_JoystickClose(joystick_);
+    }
+    controller_ = nullptr;
+    joystick_ = nullptr;
+}
+
+bool Joystick::isConnected() const
+{
+    return isOpen() && SDL_JoystickGetAttached(joystick_);
+}
+
+SDL_JoystickID Joystick::getId() const
+{
+    return id_;
+}
+
+SDL_JoystickGUID Joystick::getGuid() const
+{
+    return SDL_JoystickGetGUID(joystick_);
+}
+
+std::string Joystick::getGuidString() const
+{
+    char buf[33];
+    SDL_JoystickGetGUIDString(getGuid(), buf, sizeof(buf));
+    return std::string(buf);
+}
+
+bool Joystick::isController() const
+{
+    return controller_ != nullptr;
+}
+
+namespace {
+    float axisToFloat(int16_t v)
+    {
+        return v < 0 ? static_cast<float>(v) / std::numeric_limits<decltype(v)>::min()
+                     : static_cast<float>(v) / std::numeric_limits<decltype(v)>::max();
+    }
+}
+
+float Joystick::getAxis(ControllerAxis axis) const
+{
+    assert(controller_);
+    return axisToFloat(
+        SDL_GameControllerGetAxis(controller_, static_cast<SDL_GameControllerAxis>(axis)));
+}
+
+bool Joystick::getButton(ControllerButton button) const
+{
+    assert(controller_);
+    return SDL_GameControllerGetButton(controller_, static_cast<SDL_GameControllerButton>(button));
+}
+
+bool Joystick::open(int index)
+{
+    if (SDL_IsGameController(index)) {
+        controller_ = SDL_GameControllerOpen(index);
+        if (!controller_) {
+            return false;
+        }
+        joystick_ = SDL_GameControllerGetJoystick(controller_);
+        assert(joystick_); // It seems the function above cannot fail?
+    } else {
+        joystick_ = SDL_JoystickOpen(index);
+        if (!joystick_) {
+            return false;
+        }
+    }
+    id_ = SDL_JoystickInstanceID(joystick_);
+    return true;
+}
+
+namespace {
+    std::vector<Joystick::Ptr>& getConnectedJoysticks()
+    {
+        static std::vector<Joystick::Ptr> joysticks;
+        return joysticks;
+    }
+
+    Joystick::Ptr addJoystick(int index)
+    {
+        if (getJoystick(SDL_JoystickGetDeviceInstanceID(index))) {
+            return nullptr;
+        }
+        auto joystick = Joystick::internalOpen(index);
+        if (!joystick) {
+            return nullptr;
+        }
+        getConnectedJoysticks().push_back(joystick);
+        return joystick;
+    }
+
+    Joystick::Ptr removeJoystick(SDL_JoystickID id)
+    {
+        auto& joysticks = getConnectedJoysticks();
+        const auto it = std::find_if(joysticks.begin(), joysticks.end(),
+            [id](const auto& joystick) { return id == joystick->getId(); });
+        if (it == joysticks.end()) {
+            return nullptr;
+        }
+        auto joystick = std::move(*it);
+        joysticks.erase(it);
+        return joystick;
+    }
+}
+
+std::vector<Joystick::Ptr> getJoysticks()
+{
+    for (int i = 0; i < SDL_NumJoysticks(); ++i) {
+        addJoystick(i);
+    }
+    return getConnectedJoysticks();
+}
+
+Joystick::Ptr getJoystick(SDL_JoystickID id)
+{
+    auto& joysticks = getConnectedJoysticks();
+    const auto it = std::find_if(joysticks.begin(), joysticks.end(),
+        [id](const auto& joystick) { return id == joystick->getId(); });
+    if (it == joysticks.end()) {
+        return nullptr;
+    }
+    return *it;
 }
 
 std::optional<Event> pollEvent()
@@ -223,34 +407,104 @@ std::optional<Event> pollEvent()
             .preciseX = event.wheel.preciseX,
             .preciseY = event.wheel.preciseY,
         });
-    case SDL_JOYAXISMOTION:
-        return std::nullopt;
+    case SDL_JOYAXISMOTION: {
+        auto joystick = getJoystick(event.jaxis.which);
+        if (joystick) {
+            return detail::callEventCallbacks(events::JoystickAxisMoved {
+                .joystick = std::move(joystick),
+                .axis = event.jaxis.axis,
+                .value = axisToFloat(event.jaxis.value),
+            });
+        }
+        break;
+    }
     case SDL_JOYBALLMOTION:
         return std::nullopt;
     case SDL_JOYHATMOTION:
         return std::nullopt;
-    case SDL_JOYBUTTONDOWN:
-        return std::nullopt;
-    case SDL_JOYBUTTONUP:
-        return std::nullopt;
-    case SDL_JOYDEVICEADDED:
-        return std::nullopt;
-    case SDL_JOYDEVICEREMOVED:
-        return std::nullopt;
+    case SDL_JOYBUTTONDOWN: {
+        auto joystick = getJoystick(event.jbutton.which);
+        if (joystick) {
+            return detail::callEventCallbacks(events::JoystickButtonDown {
+                .joystick = std::move(joystick),
+                .button = event.jbutton.button,
+                .state = static_cast<ButtonState>(event.jbutton.state),
+            });
+        }
+        break;
+    }
+    case SDL_JOYBUTTONUP: {
+        auto joystick = getJoystick(event.jbutton.which);
+        if (joystick) {
+            return detail::callEventCallbacks(events::JoystickButtonUp {
+                .joystick = std::move(joystick),
+                .button = event.jbutton.button,
+                .state = static_cast<ButtonState>(event.jbutton.state),
+            });
+        }
+        break;
+    }
+    // case SDL_CONTROLLERDEVICEADDED:
+    // case SDL_CONTROLLERDEVICEREMOVED:
+    case SDL_JOYDEVICEADDED: {
+        auto joystick = addJoystick(event.jdevice.which);
+        if (joystick) {
+            return detail::callEventCallbacks(
+                events::JoystickAdded { .joystick = std::move(joystick) });
+        }
+        break;
+    }
+    case SDL_JOYDEVICEREMOVED: {
+        auto joystick = removeJoystick(event.jdevice.which);
+        if (joystick) {
+            return detail::callEventCallbacks(
+                events::JoystickRemoved { .joystick = std::move(joystick) });
+        }
+        break;
+    }
     case SDL_JOYBATTERYUPDATED:
         return std::nullopt;
-    case SDL_CONTROLLERAXISMOTION:
-        return std::nullopt;
-    case SDL_CONTROLLERBUTTONDOWN:
-        return std::nullopt;
-    case SDL_CONTROLLERBUTTONUP:
-        return std::nullopt;
-    case SDL_CONTROLLERDEVICEADDED:
-        return std::nullopt;
-    case SDL_CONTROLLERDEVICEREMOVED:
-        return std::nullopt;
-    case SDL_CONTROLLERDEVICEREMAPPED:
-        return std::nullopt;
+    case SDL_CONTROLLERAXISMOTION: {
+        auto joystick = getJoystick(event.caxis.which);
+        if (joystick) {
+            return detail::callEventCallbacks(events::ControllerAxisMoved {
+                .joystick = std::move(joystick),
+                .axis = static_cast<ControllerAxis>(event.caxis.axis),
+                .value = axisToFloat(event.caxis.value),
+            });
+        }
+        break;
+    }
+    case SDL_CONTROLLERBUTTONDOWN: {
+        auto joystick = getJoystick(event.cbutton.which);
+        if (joystick) {
+            return detail::callEventCallbacks(events::ControllerButtonDown {
+                .joystick = std::move(joystick),
+                .button = static_cast<ControllerButton>(event.cbutton.button),
+                .state = static_cast<ButtonState>(event.cbutton.state),
+            });
+        }
+        break;
+    }
+    case SDL_CONTROLLERBUTTONUP: {
+        auto joystick = getJoystick(event.cbutton.which);
+        if (joystick) {
+            return detail::callEventCallbacks(events::ControllerButtonUp {
+                .joystick = std::move(joystick),
+                .button = static_cast<ControllerButton>(event.cbutton.button),
+                .state = static_cast<ButtonState>(event.cbutton.state),
+            });
+        }
+        break;
+    }
+    case SDL_CONTROLLERDEVICEREMAPPED: {
+        auto joystick = removeJoystick(event.cdevice.which);
+        if (joystick) {
+            return detail::callEventCallbacks(
+                events::ControllerRemapped { .joystick = std::move(joystick) });
+        }
+        break;
+    }
     case SDL_CONTROLLERTOUCHPADDOWN:
         return std::nullopt;
     case SDL_CONTROLLERTOUCHPADMOTION:
