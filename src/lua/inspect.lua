@@ -323,7 +323,8 @@ function Inspector:putValue(v)
 
          puts(buf, '}')
       end
-
+   elseif tv == 'userdata' then
+      puts(buf, tostring(v))
    else
       puts(buf, fmt('<%s %d>', tv, self:getId(v)))
    end
