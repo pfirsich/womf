@@ -3,7 +3,7 @@
 #include <cassert>
 #include <utility>
 
-#include <SDL2/SDL_syswm.h>
+#include <SDL_syswm.h>
 
 namespace sdlw {
 Keycode toKeycode(Scancode scancode)

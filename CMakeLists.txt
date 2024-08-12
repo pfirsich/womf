@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.3.0)
 
 project(womf)
 
@@ -8,7 +8,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 add_compile_definitions(NOMINMAX _USE_MATH_DEFINES) # Windows is trash
 add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 
-add_subdirectory(subprojects/glwrap)
+include(cmake/CPM.cmake)
+CPMAddPackage(NAME sol2 URL "https://github.com/ThePhD/sol2/archive/refs/tags/v3.3.0.zip")
+
+add_subdirectory(deps/glwrap)
 
 # Define functions after add_subdirectory, so they are not overwritten
 include(cmake/wall.cmake)
@@ -18,14 +21,12 @@ if(WOMF_ENABLE_ASAN)
   include(cmake/asan.cmake)
 endif()
 
-find_package(sol2 CONFIG REQUIRED)
-find_package(fmt CONFIG REQUIRED)
+set(LUAJIT_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/deps/luajit/x64-linux/include)
+set(LUAJIT_LIBRARY_PATH ${CMAKE_SOURCE_DIR}/deps/luajit/x64-linux/lib/libluajit-5.1.a)
 
-find_library(LUAJIT_LIBRARY_DIR libluajit-5.1.a lua51 REQUIRED)
-find_path(LUAJIT_INCLUDE_DIR luajit.h PATH_SUFFIXES luajit-2.1 luajit REQUIRED)
 add_library(luajit INTERFACE)
 target_include_directories(luajit INTERFACE ${LUAJIT_INCLUDE_DIR})
-target_link_libraries(luajit INTERFACE ${LUAJIT_LIBRARY_DIR})
+target_link_libraries(luajit INTERFACE ${LUAJIT_LIBRARY_PATH})
 message(STATUS "LuaJIT Include Dir: ${LUAJIT_INCLUDE_DIR}")
 message(STATUS "LuaJIT Library Dir: ${LUAJIT_LIBRARY_DIR}")
 
@@ -65,6 +66,7 @@ cmrc_add_resource_library(
 
   src/lua/animation.lua
   src/lua/class.lua
+  src/lua/events.lua
   src/lua/gltf.lua
   src/lua/init.lua
 )
@@ -72,7 +74,6 @@ cmrc_add_resource_library(
 add_executable(womf ${SRC})
 target_include_directories(womf PRIVATE include)
 target_link_libraries(womf PRIVATE sol2)
-target_link_libraries(womf PRIVATE fmt::fmt)
 target_link_libraries(womf PRIVATE luajit)
 target_link_libraries(womf PRIVATE glw)
 target_link_libraries(womf PRIVATE glwx)

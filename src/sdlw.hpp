@@ -7,7 +7,7 @@
 #include <variant>
 #include <vector>
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 // Windows, you are drunk. Go home.
 #undef near
@@ -1027,8 +1027,7 @@ namespace detail {
 
     template <typename Type, typename... Types>
     struct IsTypeInVariant<Type, std::variant<Types...>>
-        : std::bool_constant<(... || std::is_same_v<Type, Types>)> {
-    };
+        : std::bool_constant<(... || std::is_same_v<Type, Types>)> { };
 }
 
 // I tried to make this thing deduce the event type from the function type, but I couldn't do it.
