@@ -165,7 +165,8 @@ bool Joystick::isController() const
 namespace {
     float axisToFloat(int16_t v)
     {
-        return v < 0 ? static_cast<float>(v) / std::numeric_limits<decltype(v)>::min()
+        // The negation is necessary, because v is negative and min is too!
+        return v < 0 ? -static_cast<float>(v) / std::numeric_limits<decltype(v)>::min()
                      : static_cast<float>(v) / std::numeric_limits<decltype(v)>::max();
     }
 }
