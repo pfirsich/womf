@@ -8,8 +8,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 add_compile_definitions(NOMINMAX _USE_MATH_DEFINES) # Windows is trash
 add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 
+include(cmake/LuaJIT.cmake)
 include(cmake/CPM.cmake)
 CPMAddPackage(NAME sol2 URL "https://github.com/ThePhD/sol2/archive/refs/tags/v3.3.0.zip")
+
 
 add_subdirectory(deps/glwrap)
 
@@ -20,15 +22,6 @@ include(cmake/CMakeRC.cmake)
 if(WOMF_ENABLE_ASAN)
   include(cmake/asan.cmake)
 endif()
-
-set(LUAJIT_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/deps/luajit/x64-linux/include)
-set(LUAJIT_LIBRARY_PATH ${CMAKE_SOURCE_DIR}/deps/luajit/x64-linux/lib/libluajit-5.1.a)
-
-add_library(luajit INTERFACE)
-target_include_directories(luajit INTERFACE ${LUAJIT_INCLUDE_DIR})
-target_link_libraries(luajit INTERFACE ${LUAJIT_LIBRARY_PATH})
-message(STATUS "LuaJIT Include Dir: ${LUAJIT_INCLUDE_DIR}")
-message(STATUS "LuaJIT Library Dir: ${LUAJIT_LIBRARY_DIR}")
 
 set(SRC
   animation.cpp
